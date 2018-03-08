@@ -1,10 +1,10 @@
 #include <Python.h>
 #include <iostream>
 #include <cstring>
-#include <set>
-#include <map>
-#include <numpy/arrayobject.h>
-// #include "rkernel.h"
+
+#include "numpy/npy_no_deprecated_api.h"
+#include "numpy/arrayobject.h"
+#include "rkernel.hpp"
 
 static char module_docstring[] = "Fast kernels for sequence";
 
@@ -20,7 +20,7 @@ static PyMethodDef rkernel_methods[] = {
     {"spectrum", (PyCFunction) rkernel_spectrum_bind, METH_VARARGS | METH_KEYWORDS, spectrum_docstring},
     {"substring", (PyCFunction) rkernel_substring_bind, METH_VARARGS  | METH_KEYWORDS, substring_docstring},
     {"mismatch", (PyCFunction) rkernel_mismatch_bind, METH_VARARGS  | METH_KEYWORDS, mismatch_docstring},
-    {NULL, NULL, 0, NULL}
+    {nullptr, nullptr, 0, nullptr}
 };
 
 static struct PyModuleDef rkernel_module = {
@@ -37,112 +37,85 @@ PyMODINIT_FUNC PyInit_rkernel(void) {
     return PyModule_Create(&rkernel_module);
 }
 
-inline static int *reindex_array(const int* data, int rows, int cols) {
-
-    std::set<int> symbols;
-    for (int i = 0; i < rows * cols; i++) {
-        symbols.insert(data[i]);
-    }
-
-    int count = 0;
-    std::map<int, int> symbol_map;
-    for (std::set<int>::iterator it = symbols.begin(); it != symbols.end(); ++it) {
-        symbol_map[*it] = count++;
-    }
-
-    int *reindexed_data = new int[rows * cols];
-    if (reindexed_data == NULL) {
-        return NULL;
-    }
-
-    for (int i = 0; i < rows * cols; i++) {
-        reindexed_data[i] = symbol_map[data[i]];
-    }
-
-    return reindexed_data;
-
-}
-
-inline static int *parse_PyArrayString(PyObject *obj, int *prows, int *pcols) {
+inline static seq_array_t parse_PyArrayString(PyObject *obj) {
 
     PyArray_Descr *des = PyArray_DescrNewFromType(NPY_UNICODE);
-    if (des == NULL) {
-        return NULL;
+    if (des == nullptr) {
+        return invalid_seq_array;
     }
 
-    PyObject *str_array = PyArray_FromAny(obj, des, 1, 1,
+    PyArrayObject *str_array = (PyArrayObject*) PyArray_FromAny(obj, des, 1, 1,
                                           NPY_ARRAY_C_CONTIGUOUS |
-                                          NPY_ARRAY_ALIGNED, NULL);
-    if (str_array == NULL) {
+                                          NPY_ARRAY_ALIGNED, nullptr);
+    if (str_array == nullptr) {
         PyErr_SetString(PyExc_TypeError, "Array is of the wrong type");
         // Py_DECREF(des);
-        return NULL;
+        return invalid_seq_array;
     }
 
-    Py_DECREF(des);
+    // Py_DECREF(des);
 
     npy_intp rows = PyArray_DIM(str_array, 0);
     npy_intp cols = PyArray_STRIDE(str_array, 0) / 4;
 
     int *str_array_data = (int*) PyArray_DATA(str_array);
-    if (str_array_data == NULL) {
+    if (str_array_data == nullptr) {
         PyErr_SetString(PyExc_ValueError, "Bad array format");
         Py_DECREF(str_array);
-        return NULL;
+        return invalid_seq_array;
     }
 
-    int *int_array_data = reindex_array(str_array_data, rows, cols);
-    if (int_array_data == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "System ran out of memory");
+    seq_array_t seq_array = format_sequence_array(str_array_data, rows, cols);
+    if (is_invalid(seq_array)) {
+        PyErr_SetString(PyExc_ValueError, "Failed to create the sequence array");
         Py_DECREF(str_array);
-        return NULL;
+        return invalid_seq_array;
     }
 
     Py_DECREF(str_array);
 
-    if (prows != NULL) *prows = rows;
-    if (pcols != NULL) *pcols = cols;
-
-    return int_array_data;
-
+    return seq_array;
 }
 
 static PyObject *rkernel_spectrum_bind(PyObject *self, PyObject *args, PyObject* kwargs) {
-    PyObject* obj = NULL;
+    PyObject* obj = nullptr;
 
     int k = 3;
 
     char *keywords[] = {
         "",
         "k",
-        NULL
+        nullptr
     };
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|i", keywords, &obj, &k))
-        return NULL;
+        return nullptr;
 
     if (k < 0) {
         PyErr_SetString(PyExc_ValueError, "Substring size k must be positive");
         Py_RETURN_NONE;
     }
 
-    int rows, cols;
-    int *array = parse_PyArrayString(obj, &rows, &cols);
-    if (array == NULL) {
+    seq_array_t seq_array = parse_PyArrayString(obj);
+    if (is_invalid(seq_array)) {
         Py_RETURN_NONE;
     }
 
-    std::cout << "k = " << k << std::endl;
-
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < cols; j++) {
-            std::cout << array[i * cols + j] << " ";
-        }
-        std::cout << std::endl;
+    kernel_t kernel = spectrum(seq_array, k);
+    if (is_invalid(kernel)) {
+        PyErr_SetString(PyExc_ValueError, "Failed to compute spectrum kernel");
+        Py_RETURN_NONE;
     }
 
-    delete[] array;
-    Py_RETURN_NONE;
+    npy_intp dims[] = {kernel.size, kernel.size};
+    PyObject* kernel_matrix = PyArray_SimpleNewFromData(2, dims, NPY_FLOAT, kernel.data);
+    if (kernel_matrix == nullptr) {
+        PyErr_SetString(PyExc_ValueError, "Failed to construct the final matrix");
+        Py_RETURN_NONE;
+    }
+
+    return kernel_matrix;
+
 }
 
 static PyObject *rkernel_substring_bind(PyObject *self, PyObject *args, PyObject *kwargs) {

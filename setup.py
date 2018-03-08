@@ -1,15 +1,19 @@
-from distutils.core import setup, Extension
 import numpy
+from numpy.distutils.core import setup, Extension
 
 module = Extension('rkernel',
                     define_macros = [('MAJOR_VERSION', '1'),
                                      ('MINOR_VERSION', '0')],
                     include_dirs = [numpy.get_include(), 'python/', 'lib/'],
-                    # language = "c++",
+                    language = "c++",
                     libraries = [],
                     library_dirs = [],
-                    extra_compile_args=['-O0'],
-                    sources = ['python/rkernel.cpp'])
+                    extra_compile_args=['-std=c++11', '-fopenmp', '-O0', '-Wno-write-strings'],
+                    sources = [
+                        'python/rkernel.cpp',
+                        'lib/format.cpp',
+                        'lib/spectrum.cpp',
+                    ])
 
 setup (name = 'RKERNEL',
        version = '1.0',
