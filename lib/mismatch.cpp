@@ -1,6 +1,7 @@
 #include <map>
 #include <vector>
 #include <cstring>
+#include <algorithm>
 
 #include "kmer.hpp"
 #include "mismatch.hpp"
@@ -15,6 +16,11 @@ struct kmer_data_t : kmer_count<hash_t> {
 };
 
 template<typename hash_t>
+inline bool compare(const kmer_data_t<hash_t> &s1, const kmer_data_t<hash_t> &s2) {
+    return s1.seq_id < s2.seq_id;
+}
+
+template<typename hash_t>
 struct depth_cache_t {
     kmer_decoding_key_t *decode_keys;
     kmer_data_t<hash_t> *kmer_data;
@@ -23,7 +29,7 @@ struct depth_cache_t {
 
 template<typename seq_t, typename hash_t>
 void mismatch_compute_rec(depth_cache_t<hash_t> &cache, kernel_t *kernel,
-                          const kmer_data_t<hash_t>* tracks, int len,
+                          kmer_data_t<hash_t>* tracks, int len,
                           int k, int d, int l) {
 
     if (len == 0) {
@@ -32,6 +38,9 @@ void mismatch_compute_rec(depth_cache_t<hash_t> &cache, kernel_t *kernel,
 
     if (d == k) {
         // This is a leaf !
+
+        std::sort(tracks, tracks + len, compare<hash_t>);
+
         for (int i = 0; i < len - 1; i++) {
             for (int j = i + 1; j < len; j++) {
 
@@ -41,7 +50,7 @@ void mismatch_compute_rec(depth_cache_t<hash_t> &cache, kernel_t *kernel,
                 int matches = tracks[i].count * tracks[j].count;
 
                 kernel->data[id1 * kernel->size + id2] += matches;
-                kernel->data[id2 * kernel->size + id1] += matches;
+                // kernel->data[id2 * kernel->size + id1] += matches;
             }
         }
 
@@ -69,14 +78,12 @@ void mismatch_compute_rec(depth_cache_t<hash_t> &cache, kernel_t *kernel,
 
         mismatch_compute_rec<seq_t, hash_t>(cache, kernel, new_tracks, new_len, k, d + 1, l);
 
-
     }
 
 }
 
-
 template<typename seq_t, typename hash_t>
-static inline bool mismatch_compute(kernel_t *kernel, const kmer_data_t<hash_t>* tracks,
+static inline bool mismatch_compute(kernel_t *kernel, kmer_data_t<hash_t>* tracks,
                                     int len, int k, int l) {
 
 
@@ -102,6 +109,8 @@ static inline bool mismatch_compute(kernel_t *kernel, const kmer_data_t<hash_t>*
     };
 
     mismatch_compute_rec<seq_t, hash_t>(cache, kernel, tracks, len, k, 0, l);
+
+    symmetrise_lower(kernel);
 
     delete[] kmer_cache;
     delete[] decode_keys;

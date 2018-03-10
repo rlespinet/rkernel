@@ -33,3 +33,23 @@ inline bool is_invalid(const kernel_t &kernel) {
 }
 
 const kernel_t invalid_kernel = {nullptr, 0};
+
+inline void symmetrise_lower(kernel_t *kernel) {
+
+    // TODO(RL) This is very cache inefficient
+    for (int i = 0; i < kernel->size - 1; i++) {
+        for (int j = i + 1; j < kernel->size; j++) {
+            kernel->data[j * kernel->size + i] = kernel->data[i * kernel->size + j];
+        }
+    }
+}
+
+inline void symmetrise_upper(kernel_t *kernel) {
+
+    // TODO(RL) This is very cache inefficient
+    for (int i = 0; i < kernel->size - 1; i++) {
+        for (int j = i + 1; j < kernel->size; j++) {
+            kernel->data[i * kernel->size + j] = kernel->data[j * kernel->size + i];
+        }
+    }
+}
