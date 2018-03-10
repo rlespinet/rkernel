@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 struct seq_array_t {
     int *data;
     int sequences_count;
