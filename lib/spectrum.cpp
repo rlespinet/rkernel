@@ -71,11 +71,12 @@ kernel_t spectrum(const seq_array_t &array, int k) {
             }
 
             kernel_data[i * seq_count + j] = matches;
-            kernel_data[j * seq_count + i] = matches;
+            // kernel_data[j * seq_count + i] = matches;
 
         }
 
     }
+
 
     delete[] kmers;
     delete[] kmers_len;
@@ -84,6 +85,8 @@ kernel_t spectrum(const seq_array_t &array, int k) {
         kernel_data,
         seq_count
     };
+
+    symmetrise_lower(&kernel);
 
     return kernel;
 }
