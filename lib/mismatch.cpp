@@ -7,8 +7,6 @@
 #include "mismatch.hpp"
 #include "utils.hpp"
 
-#include "debug.hpp"
-
 template<typename hash_t>
 struct kmer_data_t : kmer_count<hash_t> {
     int seq_id;
@@ -38,7 +36,6 @@ void mismatch_compute_rec(depth_cache_t<hash_t> &cache, kernel_t *kernel,
 
     if (d == k) {
         // This is a leaf !
-
         std::sort(tracks, tracks + len, compare<hash_t>);
 
         for (int i = 0; i < len - 1; i++) {

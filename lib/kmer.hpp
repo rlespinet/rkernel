@@ -4,60 +4,62 @@
 #include "utils.hpp"
 
 #include <map>
+#include <vector>
 
 template<class K, class V>
 using tree_map = std::map<K, V>;
 
-template<typename hash_t>
-struct kmer_count {
-    hash_t hash;
+// Type in which we encode kmers
+using e_type = uint64_t;
+
+struct kmer {
+    e_type encoding;
     int count;
 };
 
-template<typename seq_t, typename hash_t>
-inline int kmer_encoding_count(kmer_count<hash_t>* kmers, const seq_t *sequence, int seq_len, int k, int l) {
+inline int compare(const kmer &s1, const kmer &s2) {
+    return (int) (s1.encoding - s2.encoding);
+}
 
-    const hash_t shift_mod = ipow(l, k - 1);
+template<typename letter>
+vector1D<kmer> kmer_encode(const vector1D<letter> &sequence, int k, int sequence_len, int alphabet_size) {
 
-    hash_t hash = 0;
+    const e_type shift_mod = ipow(alphabet_size, k - 1);
+
+    e_type encoding = 0;
     for (int j = 0; j < k - 1; j++) {
-        hash = hash * l + static_cast<hash_t>(sequence[j]);
+        encoding = encoding * alphabet_size + static_cast<e_type>(sequence[j]);
     }
 
-    tree_map<hash_t, int> map;
+    tree_map<e_type, int> map;
 
-    for (int j = 0; j < seq_len - k + 1; j++) {
-        hash = hash * l + static_cast<hash_t>(sequence[j + k - 1]);
+    for (int j = 0; j < sequence_len - k + 1; j++) {
+        encoding = encoding * alphabet_size + static_cast<e_type>(sequence[j + k - 1]);
 
-        map[hash]++;
+        map[encoding]++;
 
-        hash = hash % shift_mod;
+        encoding = encoding % shift_mod;
     }
 
-    int size = 0;
+    int count = 0;
+    vector1D<kmer> kmers(sequence_len - k + 1);
     for (auto it = map.cbegin(); it != map.cend(); ++it) {
-        kmers[size].hash = it->first;
-        kmers[size].count = it->second;
-        size++;
+        kmers[count++] = {it->first, it->second};
+    }
+    kmers.resize(count);
+
+    return kmers;
+}
+
+template<typename letter>
+vector2D<kmer> kmer_encode_all(const vector2D<letter> &sequences, int k,
+                               int sequences_len, int alphabet_size) {
+
+    vector2D<kmer> all_kmers(sequences.size(), sequences_len);
+
+    for (int i = 0; i < sequences.size(); i++) {
+        all_kmers[i] = kmer_encode(sequences[i], k, sequences_len, alphabet_size);
     }
 
-    return size;
-
-}
-
-struct kmer_decoding_key_t {
-    int div;
-    int l;
-};
-
-inline kmer_decoding_key_t kmer_decoding_key(int i, int k, int l) {
-    kmer_decoding_key_t key = {
-        ipow(l, k - 1 - i), l
-    };
-    return key;
-}
-
-template<typename seq_t, typename hash_t>
-inline seq_t kmer_decode_id(const kmer_count<hash_t> &kmers, const kmer_decoding_key_t &key) {
-    return (kmers.hash / key.div) % key.l;
+    return all_kmers;
 }

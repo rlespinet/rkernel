@@ -1,92 +1,93 @@
-#include <limits>
-#include <map>
-
 #include "spectrum.hpp"
 #include "utils.hpp"
+
 #include "kmer.hpp"
 
-#include "debug.hpp"
+template<typename letter, typename dtype>
+sq_matrix<dtype> spectrum(const vector2D<letter> &sequences,
+                   int sequences_len, int alphabet_size, int k) {
 
-template<class K, class V>
-using map = std::map<K, V>;
+    vector2D<kmer> kmers = kmer_encode_all(sequences, k, sequences_len, alphabet_size);
 
-kernel_t spectrum(const seq_array_t &array, int k) {
+    sq_matrix<dtype> K(sequences.size());
 
-    const int seq_count = array.sequences_count;
-    const int seq_len = array.sequences_length;
-    const int alphabet_size = array.alphabet_size;
+    // Note(RL) : Below is the critical part
 
-    float *kernel_data = new float[seq_count * seq_count];
-    if (kernel_data == nullptr) {
-        return invalid_kernel;
-    }
+    for (int i = 0; i < kmers.size(); i++) {
 
-    int *kmers_len = new int[seq_count];
-    if (kmers_len == nullptr) {
-        delete[] kernel_data;
-        return invalid_kernel;
-    }
-
-    const int max_kmer_len = seq_len - k + 1;
-    kmer_count<uint64_t> *kmers = new kmer_count<uint64_t>[seq_count * max_kmer_len];
-    if (kmers == nullptr) {
-        delete[] kmers_len;
-        delete[] kernel_data;
-        return invalid_kernel;
-    }
-
-    for (int i = 0; i < seq_count; i++) {
-        kmers_len[i] = kmer_encoding_count(kmers + i * max_kmer_len,
-                                           array.data + i * seq_len,
-                                           seq_len, k, alphabet_size);
-    }
-
-    /* **************************************** *
-     * Computation of the kernel (this is the critical part)
-     * **************************************** */
-
-    // TODO(RL) Do something smarter than omp parallel for...
-// #pragma omp parallel for
-    for (int i = 0; i < seq_count; i++) {
-
-        const auto *kmers_i = kmers + i * max_kmer_len;
-        const int kmers_len_i = kmers_len[i];
-
-        for (int j = i; j < seq_count; j++) {
-
-            const auto *kmers_j = kmers + j * max_kmer_len;
-            const int kmers_len_j = kmers_len[j];
+        for (int j = i; j < kmers.size(); j++) {
 
             int matches = 0;
-            for (int ki = 0, kj = 0; ki < kmers_len_i && kj < kmers_len_j;) {
-                if (kmers_i[ki].hash < kmers_j[kj].hash) {
+            int ki = 0, kj = 0;
+            while (ki < kmers[i].size() && kj < kmers[j].size()) {
+                const int cmp = compare(kmers[i][ki], kmers[j][kj]);
+                if (cmp < 0) {
                     ki++;
-                } else if (kmers_i[ki].hash > kmers_j[kj].hash) {
+                } else if (cmp > 0) {
                     kj++;
                 } else {
-                    matches += kmers_i[ki].count * kmers_j[kj].count;
+                    matches += kmers[i][ki].count * kmers[j][kj].count;
                     ki++;
                     kj++;
                 }
             }
 
-            kernel_data[i * seq_count + j] = matches;
-            // kernel_data[j * seq_count + i] = matches;
+            K(i, j) = matches;
 
         }
 
     }
 
+    K.symmetrise_lower();
 
-    delete[] kmers;
-    delete[] kmers_len;
-
-    kernel_t kernel = {
-        kernel_data,
-        seq_count
-    };
-
-    symmetrise_lower(&kernel);
-
-    return kernel;
+    return K;
 }
+
+
+template<typename letter, typename dtype>
+matrix<dtype> spectrum(const vector2D<letter> &sequences1,
+                       const vector2D<letter> &sequences2,
+                       int sequences_len, int alphabet_size, int k) {
+
+    vector2D<kmer> kmers1 = kmer_encode_all(sequences1, k, sequences_len, alphabet_size);
+    vector2D<kmer> kmers2 = kmer_encode_all(sequences2, k, sequences_len, alphabet_size);
+
+    matrix<dtype> K(sequences1.size(), sequences2.size());
+
+    // Note(RL) : Below is the critical part
+
+    for (int i = 0; i < kmers1.size(); i++) {
+
+        for (int j = 0; j < kmers2.size(); j++) {
+
+            int matches = 0;
+            int ki = 0, kj = 0;
+            while (ki < kmers1[i].size() && kj < kmers2[j].size()) {
+                const int cmp = compare(kmers1[i][ki], kmers2[j][kj]);
+                if (cmp < 0) {
+                    ki++;
+                } else if (cmp > 0) {
+                    kj++;
+                } else {
+                    matches += kmers1[i][ki].count * kmers2[j][kj].count;
+                    ki++;
+                    kj++;
+                }
+            }
+
+            K(i, j) = matches;
+
+        }
+
+    }
+
+    return K;
+}
+
+// Template specialization
+
+template sq_matrix<double> spectrum(const vector2D<int> &, int, int, int);
+template sq_matrix<float> spectrum(const vector2D<int> &, int, int, int);
+
+template matrix<double> spectrum(const vector2D<int> &, const vector2D<int> &, int, int, int);
+template matrix<float> spectrum(const vector2D<int> &, const vector2D<int> &, int, int, int);

@@ -3,34 +3,46 @@
 #include <set>
 #include <map>
 
-seq_array_t format_sequence_array(int *data, int rows, int cols) {
+template<typename letter, typename dtype>
+sequence_array<letter> to_sequence_array(dtype *data, int rows, int cols) {
 
     std::set<int> symbols;
     for (int i = 0; i < rows * cols; i++) {
         symbols.insert(data[i]);
     }
 
-    int count = 0;
+    int symbol_size = 0;
     std::map<int, int> symbol_map;
     for (std::set<int>::iterator it = symbols.begin(); it != symbols.end(); ++it) {
-        symbol_map[*it] = count++;
+        symbol_map[*it] = symbol_size++;
     }
 
-    int *reindexed_data = new int[rows * cols];
-    if (reindexed_data == NULL) {
-        return invalid_seq_array;
-    }
-
-    for (int i = 0; i < rows * cols; i++) {
-        reindexed_data[i] = symbol_map[data[i]];
-    }
-
-    seq_array_t seq_array = {
-        reindexed_data,
-        rows, cols,
-        count
+    sequence_array<letter> seq_array = {
+        symbol_size,
+        cols,
+        vector2D<letter>(rows, cols)
     };
+    // seq_array.alphabet_size =
+    // seq_array.sequences_len = cols;
+
+    vector2D<letter> &sequences = seq_array.sequences;
+
+    sequences.resize(rows);
+    for (int i = 0; i < rows; i++) {
+        sequences[i].resize(cols);
+        for (int j = 0; j < cols; j++) {
+            sequences[i][j] = symbol_map[data[i * cols + j]];
+        }
+    }
+
+    // sequence_array<letter> seq_array = {
+    //     symbol_size,
+    //     sequences[0].size(),
+    //     std::move(sequences)
+    // };
 
     return seq_array;
 
 }
+
+template sequence_array<int> to_sequence_array(int *, int, int);
