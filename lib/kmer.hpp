@@ -15,6 +15,11 @@ using e_type = uint64_t;
 struct kmer {
     e_type encoding;
     int count;
+
+    kmer(e_type e = 0, int c = 0)
+        : encoding(e)
+        , count(c) {}
+
 };
 
 inline int compare(const kmer &s1, const kmer &s2) {
@@ -44,7 +49,7 @@ vector1D<kmer> kmer_encode(const vector1D<letter> &sequence, int k, int sequence
     int count = 0;
     vector1D<kmer> kmers(sequence_len - k + 1);
     for (auto it = map.cbegin(); it != map.cend(); ++it) {
-        kmers[count++] = {it->first, it->second};
+        kmers[count++] = kmer(it->first, it->second);
     }
     kmers.resize(count);
 
@@ -63,3 +68,9 @@ vector2D<kmer> kmer_encode_all(const vector2D<letter> &sequences, int k,
 
     return all_kmers;
 }
+
+template<typename letter>
+letter kmer_decode(const kmer &x, int alphabet_size, int i) {
+    return (x.encoding / ipow(alphabet_size, i)) % alphabet_size;
+}
+
