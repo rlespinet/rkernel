@@ -22,7 +22,7 @@ inline int compare(const kmer &s1, const kmer &s2) {
 }
 
 template<typename letter>
-vector1D<kmer> kmer_encode(const view1D<letter> &sequence, int k, int sequence_len, int alphabet_size) {
+vector1D<kmer> kmer_encode(const vector1D<letter> &sequence, int k, int sequence_len, int alphabet_size) {
 
     const e_type shift_mod = ipow(alphabet_size, k - 1);
 

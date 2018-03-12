@@ -1,22 +1,57 @@
 #pragma once
 
+
+
 template<typename T>
-struct view1D {
-
-    template<typename U>
-    friend class view1D;
-
-    template<typename U>
-    friend class vector1D;
-
-    template<typename U>
-    friend class vector2D;
-
+struct vector1D {
     int m_capacity;
     int m_size;
     T *m_data;
 
-    ~view1D() {
+    vector1D(int capacity = 0)
+        : vector1D<T>(capacity, capacity) {
+    }
+
+    vector1D(int capacity, int size)
+        : m_capacity(capacity)
+        , m_size(capacity) {
+        m_data = new T[capacity];
+    }
+
+    vector1D(const vector1D<T> &oth)
+        : vector1D<T>(oth.m_capacity, oth.m_size) {
+        std::copy(oth.m_data, oth.m_data + oth.m_size, m_data);
+    }
+
+    vector1D(vector1D<T> &&oth) {
+        swap(*this, oth);
+    }
+
+    friend void swap(vector1D &v1, vector1D &v2) {
+        using std::swap;
+        swap(v1.m_capacity, v2.m_capacity);
+        swap(v1.m_size, v2.m_size);
+        swap(v1.m_data, v2.m_data);
+    }
+
+    vector1D<T>& operator=(vector1D<T> oth) {
+        // TODO(RL) Don't need to always reallocate
+        // swap(*this, oth);
+        // return *this;
+
+        if (m_capacity < oth.m_size) {
+            vector1D<T> t(oth.m_capacity);
+            swap(*this, t);
+        }
+
+        std::copy(oth.m_data, oth.m_data + oth.m_size, m_data);
+        m_size = oth.m_size;
+
+        return *this;
+    }
+
+    ~vector1D() {
+        delete[] m_data;
     }
 
     const int capacity() const {
@@ -60,125 +95,25 @@ struct view1D {
         this->m_size = new_size;
     }
 
-    view1D<T>& operator=(const view1D<T> &oth) {
-
-        assert(m_capacity > oth.m_size);
-
-        for (int i = 0; i < oth.m_size; i++) {
-            m_data[i] = oth.m_data[i];
-        }
-        m_size = oth.m_size;
-
-        return *this;
-    }
-
-private:
-
-    view1D(T* data, int capacity, int size)
-        : m_capacity(capacity)
-        , m_size(capacity)
-        , m_data(data) {
-    }
-
-    view1D(T* data = nullptr, int capacity = 0)
-        : view1D<T>(data, capacity, capacity) {
-    }
-
-    view1D(const view1D<T> &oth)
-        : m_capacity(oth.m_capacity)
-        , m_size(oth.m_size)
-        , m_data(oth.m_data) {
-    }
-
-    view1D(view1D<T> &&oth) {
-        swap(*this, oth);
-    }
-
-    friend void swap(view1D &v1, view1D &v2) {
-        using std::swap;
-        swap(v1.m_capacity, v2.m_capacity);
-        swap(v1.m_size, v2.m_size);
-        swap(v1.m_data, v2.m_data);
-    }
-
-    void set(T* data, int capacity, int size) {
-        view1D<T> oth(data, capacity, size);
-        swap(*this, oth);
-    }
-
-    void set(T* data, int capacity) {
-        set(data, capacity, capacity);
-    }
-
-
 };
 
 
 template<typename T>
-struct vector1D : public view1D<T> {
+struct vector2D : public vector1D< vector1D<T> > {
 
-    using view1D<T>::m_data;
-    using view1D<T>::m_capacity;
-    using view1D<T>::m_size;
-
-    vector1D(int capacity = 0)
-        : vector1D<T>(capacity, capacity) {
-    }
-
-    vector1D(int capacity, int size)
-        : view1D<T>(new T[capacity], capacity, size) {
-    }
-
-    vector1D(const vector1D<T> &oth)
-        : vector1D<T>(oth.m_capacity, oth.m_size) {
-        // std::copy(oth.m_data, oth.m_data + oth.m_size, m_data);
-        static_cast<view1D<T>&>(*this) = static_cast<const view1D<T>&>(oth);
-        // assert(0); // Because costly
-    }
-
-    vector1D(vector1D<T> &&oth)
-        : vector1D<T>() {
-        swap(*this, oth);
-    }
-
-    ~vector1D() {
-        if (m_data != nullptr) {
-            delete[] m_data;
-        }
-    }
-
-    friend void swap(vector1D &v1, vector1D &v2) {
-        using std::swap;
-        swap(static_cast<view1D<T>&>(v1),static_cast<view1D<T>&>(v2));
-    }
-
-    vector1D<T>& operator=(vector1D<T> oth) {
-        // TODO(RL) Maybe we don't need to reallocate :/
-        swap(*this, oth);
-        return *this;
-    }
-
-};
-
-template<typename T>
-struct vector2D : public vector1D< view1D<T> > {
-
-    using vector1D< view1D<T> >::m_data;
-    using vector1D< view1D<T> >::m_capacity;
-    using vector1D< view1D<T> >::m_size;
+    using vector1D< vector1D<T> >::m_data;
+    using vector1D< vector1D<T> >::m_capacity;
+    using vector1D< vector1D<T> >::m_size;
 
     vector2D(int rows, int cols)
-        : vector1D< view1D<T> >(rows) {
+        : vector1D< vector1D<T> >(rows) {
 
-        T *data = new T[rows * cols];
         for (int i = 0; i < rows; i++) {
-            m_data[i].set(data + i * cols, cols);
+            m_data[i] = vector1D<T>(cols);
         }
-
     }
 
     ~vector2D() {
-        delete[] (*this)[0].data();
     }
 
 };
