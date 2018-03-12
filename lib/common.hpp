@@ -14,22 +14,28 @@
 
 template<typename T>
 struct view1D {
+    int m_capacity;
     int m_size;
     T *m_data;
 
-    view1D()
-        : m_size(0)
-        , m_data(nullptr) {
+    view1D(T* data, int capacity, int size)
+        : m_capacity(capacity)
+        , m_size(capacity)
+        , m_data(data) {
     }
 
-    view1D(int size, T* data)
-        : m_size(size)
-        , m_data(data) {
+    view1D(T* data = nullptr, int capacity = 0)
+        : view1D<T>(data, capacity, capacity) {
     }
 
     view1D(const view1D<T> &oth)
-        : m_size(size)
-        , m_data(data) {
+        : m_capacity(oth.m_capacity)
+        , m_size(oth.m_size)
+        , m_data(oth.m_data) {
+    }
+
+    view1D(view1D<T> &&oth) {
+        swap(*this, oth);
     }
 
     ~view1D() {
@@ -37,6 +43,7 @@ struct view1D {
 
     friend void swap(view1D &v1, view1D &v2) {
         using std::swap;
+        swap(v1.m_capacity, v2.m_capacity);
         swap(v1.m_size, v2.m_size);
         swap(v1.m_data, v2.m_data);
     }
@@ -44,6 +51,10 @@ struct view1D {
     view1D<T>& operator=(view1D<T> oth) {
         swap(*this, oth);
         return *this;
+    }
+
+    const int capacity() const {
+        return m_capacity;
     }
 
     const int size() const {
@@ -78,26 +89,29 @@ struct view1D {
         return m_data[i];
     }
 
+    void resize(int new_size) {
+        assert(new_size <= capacity);
+        this->m_size = new_size;
+    }
+
 };
 
 
 template<typename T>
 struct vector1D : public view1D<T> {
 
-    int m_capacity;
-
-    vector1D()
-        : view1D<T>()
-        , m_capacity(0) {
+    vector1D(int capacity = 0)
+        : vector1D<T>(capacity, capacity) {
     }
 
-    vector1D(int size)
-        : view1D<T>(size, new T[size])
-        , m_capacity(size) {
+    vector1D(int capacity, int size)
+        : view1D<T>(new T[capacity], capacity, size) {
     }
 
-    vector1D(const vector1D<T> &oth) {
-        assert(0);
+    vector1D(const vector1D<T> &oth)
+        : vector1D<T>(oth.m_capacity, oth.m_size) {
+        std::copy(oth.m_data, oth.m_data + oth.m_size, this->m_data);
+        assert(0); // Because costly
     }
 
     vector1D(vector1D<T> &&oth)
@@ -113,8 +127,7 @@ struct vector1D : public view1D<T> {
 
     friend void swap(vector1D &v1, vector1D &v2) {
         using std::swap;
-        swap((view1D<T>&)v1, (view1D<T>&)v2);
-        swap(v1.m_capacity, v2.m_capacity);
+        swap(static_cast<view1D<T>&>(v1),static_cast<view1D<T>&>(v2));
     }
 
     vector1D<T>& operator=(vector1D<T> oth) {
@@ -122,40 +135,19 @@ struct vector1D : public view1D<T> {
         return *this;
     }
 
-    const int capacity() const {
-        return m_capacity;
-    }
-
-    // void push_back(const T& elt) {
-    //     assert(m_size < m_capacity);
-    //     m_data[m_size] = elt;
-    //     m_size++;
-    // }
-
-    // void push_back(T&& elt) {
-    //     assert(m_size < m_capacity);
-    //     m_data[m_size] = std::move(elt);
-    //     m_size++;
-    // }
-
-    void resize(int new_size) {
-        assert(new_size <= capacity);
-        this->m_size = new_size;
-    }
-
 };
 
 template<typename T>
-struct vector2D : public vector1D< vector1D<T> > {
+struct vector2D : public vector1D< view1D<T> > {
 
     vector2D(int rows, int cols)
-        : vector1D< vector1D<T> >(rows) {
+        : vector1D< view1D<T> >(rows) {
 
+        T *data = new T[rows * cols];
         for (int i = 0; i < rows; i++) {
-            this->m_data[i] = vector1D<T>(cols);
+            this->m_data[i] = view1D<T>(data + i * cols, cols);
         }
 
-        // T *data = new T[rows * cols];
         // for (int i = 0; i < rows; i++) {
         //     this->m_data[i].m_data = data + i *cols;
         //     this->m_data[i].m_capacity = cols;
@@ -163,11 +155,9 @@ struct vector2D : public vector1D< vector1D<T> > {
 
     }
 
-    // ~vector2D() {
-        // for (int i = 0; i < this->size(); i++) {
-        //     this->m_data[i].m_data = nullptr;
-        // }
-    // }
+    ~vector2D() {
+        delete[] (*this)[0].data();
+    }
 
 };
 
