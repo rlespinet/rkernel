@@ -19,6 +19,12 @@ struct matrix {
         m_data = new T[m_rows * m_cols];
     }
 
+    matrix(int rows, int cols, const T& value)
+        : matrix(rows, cols) {
+        fill(value);
+    }
+
+
     matrix(const matrix& oth) {
         // std::cout << "sq_matrix_copy" << std::endl;
         assert(0);
@@ -74,6 +80,12 @@ struct matrix {
         return this->m_data;
     }
 
+    void fill(const T&elt) {
+        for (int i = 0; i < m_rows * m_cols; i++) {
+            m_data[i] = elt;
+        }
+    }
+
     // TODO(RL) Is this a good idea to do this ?
     T* steal_data() {
         T* data = m_data;
@@ -95,6 +107,10 @@ struct sq_matrix : public matrix<T> {
     sq_matrix(int size)
         : matrix<T>(size, size) {
         // std::cout << "sq_matrix_alloc" << std::endl;
+    }
+
+    sq_matrix(int size, const T& value)
+        : matrix<T>(size, size, value) {
     }
 
     sq_matrix(const sq_matrix& oth)
