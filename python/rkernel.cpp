@@ -6,7 +6,7 @@
 #include "numpy/arrayobject.h"
 #include "rkernel.hpp"
 
-static char module_docstring[] = "Fast kernels for sequence";
+static char module_docstring[] = "Fast kernels for sequences";
 
 static char mismatch_docstring [] = "The mismatch kernel";
 static char spectrum_docstring [] = "The spectrum kernel";
@@ -70,11 +70,7 @@ static PyObject *rkernel_spectrum_bind(PyObject *self, PyObject *args, PyObject*
 
     int k = 3;
 
-    char *keywords[] = {
-        "",
-        "k",
-        nullptr
-    };
+    char *keywords[] = {"", "k", nullptr};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|i", keywords, &obj, &k))
         return nullptr;
@@ -87,8 +83,8 @@ static PyObject *rkernel_spectrum_bind(PyObject *self, PyObject *args, PyObject*
     sequence_array<int> seq_array = parse_PyArrayString<int>(obj);
 
     sq_matrix<float> kernel = spectrum<int, float>(seq_array.sequences,
-                                                seq_array.sequences_len,
-                                                seq_array.alphabet_size, k);
+                                                   seq_array.sequences_len,
+                                                   seq_array.alphabet_size, k);
 
     npy_intp dims[] = {kernel.rows(), kernel.cols()};
     PyObject* kernel_matrix = PyArray_SimpleNewFromData(2, dims, NPY_FLOAT, kernel.steal_data());
@@ -148,55 +144,3 @@ static PyObject *rkernel_mismatch_bind(PyObject *self, PyObject *args, PyObject*
     return kernel_matrix;
 
 }
-
-
-
-// static PyObject *rkernel_mismatch_bind(PyObject *self, PyObject *args, PyObject *kwargs) {
-//     PyObject* obj = nullptr;
-
-//     int k = 3;
-//     int m = 1;
-
-//     char *keywords[] = {
-//         "",
-//         "k",
-//         "m",
-//         nullptr
-//     };
-
-//     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|ii", keywords, &obj, &k, &m))
-//         return nullptr;
-
-//     if (k < 0) {
-//         PyErr_SetString(PyExc_ValueError, "Substring size k must be positive");
-//         Py_RETURN_NONE;
-//     }
-
-//     if (m < 0) {
-//         PyErr_SetString(PyExc_ValueError, "Allowed mismatch must be positive");
-//         Py_RETURN_NONE;
-//     }
-
-//     seq_array_t seq_array = parse_PyArrayString(obj);
-//     if (is_invalid(seq_array)) {
-//         Py_RETURN_NONE;
-//     }
-
-//     kernel_t kernel = mismatch(seq_array, k, m);
-//     if (is_invalid(kernel)) {
-//         PyErr_SetString(PyExc_ValueError, "Failed to compute spectrum kernel");
-//         Py_RETURN_NONE;
-//     }
-
-//     npy_intp dims[] = {kernel.size, kernel.size};
-//     PyObject* kernel_matrix = PyArray_SimpleNewFromData(2, dims, NPY_FLOAT, kernel.data);
-//     if (kernel_matrix == nullptr) {
-//         PyErr_SetString(PyExc_ValueError, "Failed to construct the final matrix");
-//         Py_RETURN_NONE;
-//     }
-
-//     return kernel_matrix;
-
-
-//     Py_RETURN_NONE;
-// }
