@@ -59,15 +59,19 @@ void mismatch_compute_rec(sq_matrix<dtype> &K,
         // This is a leaf !
         // std::sort(tracks, tracks + len, compare<hash_t>);
 
+        // NOTE(RL) Normally, we would iterate for i=0..size and j=0..size
+        // but in fact we can iterator for j=i..size, and multiply
+        // by a coefficient (coeff) to compensate
         for (int i = 0; i < tracks.size(); i++) {
-            for (int j = 0; j < tracks.size(); j++) {
+            for (int j = i; j < tracks.size(); j++) {
 
                 int id1 = tracks[i].seq_id;
                 int id2 = tracks[j].seq_id;
 
                 int matches = tracks[i].count * tracks[j].count;
 
-                K(id1, id2) += matches;
+                int coeff = (i != j && id1 == id2) ? 2 : 1;
+                K(id1, id2) += coeff * matches;
             }
         }
 
