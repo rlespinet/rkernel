@@ -1,180 +1,128 @@
-#include <map>
-#include <vector>
 #include <cstring>
 #include <algorithm>
 
 #include "kmer.hpp"
 #include "mismatch.hpp"
-#include "utils.hpp"
 
-template<typename hash_t>
-struct kmer_data_t : kmer_count<hash_t> {
+struct kmer_mismatch : kmer {
+    using kmer::encoding;
+    using kmer::count;
     int seq_id;
     int mismatchs;
+
+    kmer_mismatch(kmer k = kmer(), int s = 0, int m = 0)
+        : kmer(k)
+        , seq_id(s)
+        , mismatchs(m) {}
+
 };
 
-template<typename hash_t>
-inline bool compare(const kmer_data_t<hash_t> &s1, const kmer_data_t<hash_t> &s2) {
+inline bool compare(const kmer_mismatch &s1, const kmer_mismatch &s2) {
     return s1.seq_id < s2.seq_id;
 }
 
-template<typename hash_t>
-struct depth_cache_t {
-    kmer_decoding_key_t *decode_keys;
-    kmer_data_t<hash_t> *kmer_data;
-    int line_size;
-};
+template<typename letter>
+vector1D<kmer_mismatch> compute_kmer_mismatch(const vector2D<letter> &sequences,
+                                              int sequences_len, int alphabet_size,
+                                              int k, int m) {
 
-template<typename seq_t, typename hash_t>
-void mismatch_compute_rec(depth_cache_t<hash_t> &cache, kernel_t *kernel,
-                          kmer_data_t<hash_t>* tracks, int len,
-                          int k, int d, int l) {
+    vector2D<kmer> kmers = kmer_encode_all(sequences, k, sequences_len, alphabet_size);
 
-    if (len == 0) {
+    int total_kmers = 0;
+    for (int i = 0; i < kmers.size(); i++) {
+        total_kmers += kmers[i].size();
+    }
+
+    int kmer_mismatch_size = 0;
+    vector1D<kmer_mismatch> kmer_mismatchs(total_kmers);
+    for (int i = 0; i < kmers.size(); i++) {
+        for (int j = 0; j < kmers[i].size(); j++) {
+            kmer_mismatchs[kmer_mismatch_size] = kmer_mismatch(kmers[i][j], i, m);
+            kmer_mismatch_size++;
+        }
+    }
+    kmer_mismatchs.resize(kmer_mismatch_size);
+
+    return kmer_mismatchs;
+}
+
+template<typename letter, typename dtype>
+void mismatch_compute_rec(sq_matrix<dtype> &K,
+                          const vector1D<kmer_mismatch> &tracks,
+                          int alphabet_size, int k, int d) {
+
+    if (tracks.size() == 0) {
         return;
     }
 
     if (d == k) {
         // This is a leaf !
-        std::sort(tracks, tracks + len, compare<hash_t>);
+        // std::sort(tracks, tracks + len, compare<hash_t>);
 
-        for (int i = 0; i < len - 1; i++) {
-            for (int j = i + 1; j < len; j++) {
+        for (int i = 0; i < tracks.size(); i++) {
+            for (int j = 0; j < tracks.size(); j++) {
 
                 int id1 = tracks[i].seq_id;
                 int id2 = tracks[j].seq_id;
 
                 int matches = tracks[i].count * tracks[j].count;
 
-                kernel->data[id1 * kernel->size + id2] += matches;
-                // kernel->data[id2 * kernel->size + id1] += matches;
+                K(id1, id2) += matches;
             }
         }
 
         return;
     }
 
-    kmer_data_t<hash_t> *new_tracks = cache.kmer_data + d * cache.line_size;
-    kmer_decoding_key_t &key = cache.decode_keys[d];
+    vector1D<kmer_mismatch> new_tracks(tracks.size());
 
-    for (int a = 0; a < l; a++) {
+    for (letter a = 0; a < alphabet_size; a++) {
 
-        int new_len = 0;
-        for (int i = 0; i < len; i++) {
+        int new_tracks_size = 0;
+        for (int i = 0; i < tracks.size(); i++) {
 
-            seq_t c = kmer_decode_id<seq_t, hash_t>(tracks[i], key);
+            letter c = kmer_decode<letter>(tracks[i].encoding, alphabet_size, k - 1 - d);
             if (c == a || tracks[i].mismatchs > 0) {
 
-                new_tracks[new_len] = tracks[i];
-                new_tracks[new_len].mismatchs -= (c == a) ? 0 : 1;
+                new_tracks[new_tracks_size] = tracks[i];
+                if (c != a) {
+                    new_tracks[new_tracks_size].mismatchs --;
+                }
 
-                new_len++;
+                new_tracks_size++;
             }
 
         }
 
-        mismatch_compute_rec<seq_t, hash_t>(cache, kernel, new_tracks, new_len, k, d + 1, l);
+        new_tracks.resize(new_tracks_size);
+
+        mismatch_compute_rec<letter, dtype>(K, new_tracks, alphabet_size, k, d + 1);
 
     }
 
 }
 
-template<typename seq_t, typename hash_t>
-static inline bool mismatch_compute(kernel_t *kernel, kmer_data_t<hash_t>* tracks,
-                                    int len, int k, int l) {
 
+template<typename letter, typename dtype>
+sq_matrix<dtype> mismatch(const vector2D<letter> &sequences,
+                          int sequences_len, int alphabet_size,
+                          int k, int m) {
 
-    kmer_decoding_key_t *decode_keys = new kmer_decoding_key_t[k];
-    if (decode_keys == nullptr) {
-        return false;
-    }
+    vector1D<kmer_mismatch> kmer_mismatchs = compute_kmer_mismatch(sequences, sequences_len,
+                                                                   alphabet_size, k, m);
+    sq_matrix<dtype> K(sequences.size(), 0);
 
-    for (int i = 0; i < k; i++) {
-        decode_keys[i] = kmer_decoding_key(i, k, l);
-    }
+    mismatch_compute_rec<letter, dtype>(K, kmer_mismatchs, alphabet_size, k, 0);
 
-    kmer_data_t<hash_t> *kmer_cache = new kmer_data_t<hash_t>[len * k];
-    if (kmer_cache == nullptr) {
-        delete[] decode_keys;
-        return false;
-    }
+    K.symmetrise_lower();
 
-    depth_cache_t<hash_t> cache = {
-        decode_keys,
-        kmer_cache,
-        len
-    };
+    return K;
 
-    mismatch_compute_rec<seq_t, hash_t>(cache, kernel, tracks, len, k, 0, l);
-
-    symmetrise_lower(kernel);
-
-    delete[] kmer_cache;
-    delete[] decode_keys;
-
-    return true;
 }
 
-kernel_t mismatch(const seq_array_t &array, int k, int m) {
 
-    using hash_t = uint64_t;
-    using seq_t = int;
+template sq_matrix<double> mismatch(const vector2D<int> &, int, int, int, int);
+template sq_matrix<float> mismatch(const vector2D<int> &, int, int, int, int);
 
-    const int seq_count = array.sequences_count;
-    const int seq_len = array.sequences_length;
-    const int alphabet_size = array.alphabet_size;
-
-    float *kernel_data = new float[seq_count * seq_count]();
-    if (kernel_data == nullptr) {
-        return invalid_kernel;
-    }
-
-    const int max_kmer_len = seq_len - k + 1;
-    kmer_count<hash_t> *kmers_count = new kmer_count<hash_t>[max_kmer_len];
-    if (kmers_count == nullptr) {
-        delete[] kernel_data;
-        return invalid_kernel;
-    }
-
-    kmer_data_t<hash_t> *kmers_data = new kmer_data_t<hash_t>[seq_count * max_kmer_len];
-    if (kmers_data == nullptr) {
-        delete[] kmers_count;
-        delete[] kernel_data;
-        return invalid_kernel;
-    }
-
-    // Filling in the structure
-    int kmers_len = 0;
-    for (int i = 0; i < seq_count; i++) {
-        int len = kmer_encoding_count(kmers_count, array.data + i * seq_len,
-                                      seq_len, k, alphabet_size);
-
-        for (int j = 0; j < len; j++) {
-            (kmer_count<hash_t>&) kmers_data[kmers_len] = kmers_count[j];
-
-            kmers_data[kmers_len].seq_id = i;
-            kmers_data[kmers_len].mismatchs = m;
-
-            kmers_len++;
-        }
-
-    }
-
-    kernel_t kernel = {
-        kernel_data,
-        seq_count
-    };
-
-    bool ok = mismatch_compute<seq_t, hash_t>(&kernel, kmers_data, kmers_len, k, alphabet_size);
-    if (!ok) {
-        delete[] kmers_data;
-        delete[] kmers_count;
-        delete[] kernel_data;
-        return invalid_kernel;
-    }
-
-    delete[] kmers_data;
-    delete[] kmers_count;
-
-    return kernel;
-}
+// template matrix<double> spectrum(const vector2D<int> &, const vector2D<int> &, int, int, int);
+// template matrix<float> spectrum(const vector2D<int> &, const vector2D<int> &, int, int, int);
