@@ -17,7 +17,7 @@ module = Extension('rkernel',
                         'python/rkernel.cpp',
                         'lib/format.cpp',
                         'lib/spectrum.cpp',
-                        # 'lib/mismatch.cpp',
+                        'lib/mismatch.cpp',
                     ])
 
 setup (name = 'RKERNEL',

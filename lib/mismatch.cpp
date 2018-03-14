@@ -4,29 +4,49 @@
 #include "kmer.hpp"
 #include "mismatch.hpp"
 
-struct kmer_mismatch : kmer {
-    using kmer::encoding;
-    using kmer::count;
+template<typename letter>
+struct kmer_mismatch : kmer_count<letter> {
     int seq_id;
     int mismatchs;
 
-    kmer_mismatch(kmer k = kmer(), int s = 0, int m = 0)
-        : kmer(k)
-        , seq_id(s)
-        , mismatchs(m) {}
+    kmer_mismatch()
+	: kmer_count<letter>()
+	, seq_id(0)
+	, mismatchs(0) {
+    }
+
+    kmer_mismatch(const kmer_count<letter> &s, int i, int m)
+	: kmer_count<letter>(s)
+	, seq_id(i)
+	, mismatchs(m) {
+    }
 
 };
 
-inline bool compare(const kmer_mismatch &s1, const kmer_mismatch &s2) {
+// struct kmer_mismatch : kmer {
+//     using kmer::encoding;
+//     using kmer::count;
+//     int seq_id;
+//     int mismatchs;
+
+//     kmer_mismatch(kmer k = kmer(), int s = 0, int m = 0)
+//         : kmer(k)
+//         , seq_id(s)
+//         , mismatchs(m) {}
+
+// };
+
+template<typename letter>
+inline bool compare(const kmer_mismatch<letter> &s1, const kmer_mismatch<letter> &s2) {
     return s1.seq_id < s2.seq_id;
 }
 
 template<typename letter>
-vector1D<kmer_mismatch> compute_kmer_mismatch(const vector2D<letter> &sequences,
+vector1D< kmer_mismatch<letter> > compute_kmer_mismatch(const vector2D<letter> &sequences,
                                               int sequences_len, int alphabet_size,
                                               int k, int m) {
 
-    vector2D<kmer> kmers = kmer_encode_all(sequences, k, sequences_len, alphabet_size);
+    vector2D< kmer_count<letter> > kmers = count_all_kmers(sequences, k);
 
     int total_kmers = 0;
     for (int i = 0; i < kmers.size(); i++) {
@@ -34,10 +54,10 @@ vector1D<kmer_mismatch> compute_kmer_mismatch(const vector2D<letter> &sequences,
     }
 
     int kmer_mismatch_size = 0;
-    vector1D<kmer_mismatch> kmer_mismatchs(total_kmers);
+    vector1D< kmer_mismatch<letter> > kmer_mismatchs(total_kmers);
     for (int i = 0; i < kmers.size(); i++) {
         for (int j = 0; j < kmers[i].size(); j++) {
-            kmer_mismatchs[kmer_mismatch_size] = kmer_mismatch(kmers[i][j], i, m);
+            kmer_mismatchs[kmer_mismatch_size] = kmer_mismatch<letter>(kmers[i][j], i, m);
             kmer_mismatch_size++;
         }
     }
@@ -48,7 +68,7 @@ vector1D<kmer_mismatch> compute_kmer_mismatch(const vector2D<letter> &sequences,
 
 template<typename letter, typename dtype>
 void mismatch_compute_rec(sq_matrix<dtype> &K,
-                          const vector1D<kmer_mismatch> &tracks,
+                          const vector1D< kmer_mismatch<letter> > &tracks,
                           int alphabet_size, int k, int d) {
 
     if (tracks.size() == 0) {
@@ -78,14 +98,14 @@ void mismatch_compute_rec(sq_matrix<dtype> &K,
         return;
     }
 
-    vector1D<kmer_mismatch> new_tracks(tracks.size());
+    vector1D< kmer_mismatch<letter> > new_tracks(tracks.size());
 
     for (letter a = 0; a < alphabet_size; a++) {
 
         int new_tracks_size = 0;
         for (int i = 0; i < tracks.size(); i++) {
 
-            letter c = kmer_decode<letter>(tracks[i].encoding, alphabet_size, k - 1 - d);
+            letter c = tracks[i].data[d];
             if (c == a || tracks[i].mismatchs > 0) {
 
                 new_tracks[new_tracks_size] = tracks[i];
@@ -112,8 +132,8 @@ sq_matrix<dtype> mismatch(const vector2D<letter> &sequences,
                           int sequences_len, int alphabet_size,
                           int k, int m) {
 
-    vector1D<kmer_mismatch> kmer_mismatchs = compute_kmer_mismatch(sequences, sequences_len,
-                                                                   alphabet_size, k, m);
+    vector1D<kmer_mismatch<letter> > kmer_mismatchs = compute_kmer_mismatch(sequences, sequences_len,
+									    alphabet_size, k, m);
     sq_matrix<dtype> K(sequences.size(), 0);
 
     mismatch_compute_rec<letter, dtype>(K, kmer_mismatchs, alphabet_size, k, 0);
