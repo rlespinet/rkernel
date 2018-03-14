@@ -101,46 +101,49 @@ static PyObject *rkernel_substring_bind(PyObject *self, PyObject *args, PyObject
     Py_RETURN_NONE;
 }
 
-
 static PyObject *rkernel_mismatch_bind(PyObject *self, PyObject *args, PyObject* kwargs) {
-    PyObject* obj = nullptr;
-
-    int k = 3;
-    int m = 1;
-
-    char *keywords[] = {
-        "",
-        "k",
-        "m",
-        nullptr
-    };
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|ii", keywords, &obj, &k, &m))
-        return nullptr;
-
-    if (k < 0) {
-        PyErr_SetString(PyExc_ValueError, "Substring size k must be positive");
-        Py_RETURN_NONE;
-    }
-
-    if (m < 0) {
-        PyErr_SetString(PyExc_ValueError, "Allowed mismatch must be positive");
-        Py_RETURN_NONE;
-    }
-
-    sequence_array<int> seq_array = parse_PyArrayString<int>(obj);
-
-    sq_matrix<float> kernel = mismatch<int, float>(seq_array.sequences,
-                                                   seq_array.sequences_len,
-                                                   seq_array.alphabet_size, k, m);
-
-    npy_intp dims[] = {kernel.rows(), kernel.cols()};
-    PyObject* kernel_matrix = PyArray_SimpleNewFromData(2, dims, NPY_FLOAT, kernel.steal_data());
-    if (kernel_matrix == nullptr) {
-        PyErr_SetString(PyExc_ValueError, "Failed to construct the final matrix");
-        Py_RETURN_NONE;
-    }
-
-    return kernel_matrix;
-
+    Py_RETURN_NONE;
 }
+
+// static PyObject *rkernel_mismatch_bind(PyObject *self, PyObject *args, PyObject* kwargs) {
+//     PyObject* obj = nullptr;
+
+//     int k = 3;
+//     int m = 1;
+
+//     char *keywords[] = {
+//         "",
+//         "k",
+//         "m",
+//         nullptr
+//     };
+
+//     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|ii", keywords, &obj, &k, &m))
+//         return nullptr;
+
+//     if (k < 0) {
+//         PyErr_SetString(PyExc_ValueError, "Substring size k must be positive");
+//         Py_RETURN_NONE;
+//     }
+
+//     if (m < 0) {
+//         PyErr_SetString(PyExc_ValueError, "Allowed mismatch must be positive");
+//         Py_RETURN_NONE;
+//     }
+
+//     sequence_array<int> seq_array = parse_PyArrayString<int>(obj);
+
+//     sq_matrix<float> kernel = mismatch<int, float>(seq_array.sequences,
+//                                                    seq_array.sequences_len,
+//                                                    seq_array.alphabet_size, k, m);
+
+//     npy_intp dims[] = {kernel.rows(), kernel.cols()};
+//     PyObject* kernel_matrix = PyArray_SimpleNewFromData(2, dims, NPY_FLOAT, kernel.steal_data());
+//     if (kernel_matrix == nullptr) {
+//         PyErr_SetString(PyExc_ValueError, "Failed to construct the final matrix");
+//         Py_RETURN_NONE;
+//     }
+
+//     return kernel_matrix;
+
+// }
