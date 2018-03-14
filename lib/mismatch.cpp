@@ -23,19 +23,6 @@ struct kmer_mismatch : kmer_count<letter> {
 
 };
 
-// struct kmer_mismatch : kmer {
-//     using kmer::encoding;
-//     using kmer::count;
-//     int seq_id;
-//     int mismatchs;
-
-//     kmer_mismatch(kmer k = kmer(), int s = 0, int m = 0)
-//         : kmer(k)
-//         , seq_id(s)
-//         , mismatchs(m) {}
-
-// };
-
 template<typename letter>
 inline bool compare(const kmer_mismatch<letter> &s1, const kmer_mismatch<letter> &s2) {
     return s1.seq_id < s2.seq_id;
@@ -147,6 +134,3 @@ sq_matrix<dtype> mismatch(const vector2D<letter> &sequences,
 
 template sq_matrix<double> mismatch(const vector2D<int> &, int, int, int, int);
 template sq_matrix<float> mismatch(const vector2D<int> &, int, int, int, int);
-
-// template matrix<double> spectrum(const vector2D<int> &, const vector2D<int> &, int, int, int);
-// template matrix<float> spectrum(const vector2D<int> &, const vector2D<int> &, int, int, int);

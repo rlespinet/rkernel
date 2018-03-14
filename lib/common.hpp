@@ -5,7 +5,6 @@
 #include <cassert>
 #include <iostream>
 
-
 // template<typename T>
 // using vector1D = std::vector<T>;
 

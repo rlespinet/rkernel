@@ -22,8 +22,6 @@ sequence_array<letter> to_sequence_array(dtype *data, int rows, int cols) {
         cols,
         vector2D<letter>(rows, cols)
     };
-    // seq_array.alphabet_size =
-    // seq_array.sequences_len = cols;
 
     vector2D<letter> &sequences = seq_array.sequences;
 
@@ -34,12 +32,6 @@ sequence_array<letter> to_sequence_array(dtype *data, int rows, int cols) {
             sequences[i][j] = symbol_map[data[i * cols + j]];
         }
     }
-
-    // sequence_array<letter> seq_array = {
-    //     symbol_size,
-    //     sequences[0].size(),
-    //     std::move(sequences)
-    // };
 
     return seq_array;
 
