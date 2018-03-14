@@ -3,11 +3,11 @@
 
 #include "kmer.hpp"
 
-template<typename letter, typename dtype>
-sq_matrix<dtype> spectrum(const vector2D<letter> &sequences,
+template<typename dtype>
+sq_matrix<dtype> spectrum(const vector2D<ltype> &sequences,
                    int sequences_len, int alphabet_size, int k) {
 
-    vector2D< kmer_count<letter> > kmers = count_all_kmers(sequences, k);
+    vector2D< kmer_count > kmers = count_all_kmers(sequences, k);
 
     sq_matrix<dtype> K(sequences.size());
 
@@ -43,5 +43,5 @@ sq_matrix<dtype> spectrum(const vector2D<letter> &sequences,
     return K;
 }
 
-template sq_matrix<double> spectrum(const vector2D<int> &, int, int, int);
-template sq_matrix<float> spectrum(const vector2D<int> &, int, int, int);
+template sq_matrix<double> spectrum(const vector2D<ltype> &, int, int, int);
+template sq_matrix<float> spectrum(const vector2D<ltype> &, int, int, int);

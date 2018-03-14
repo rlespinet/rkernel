@@ -12,12 +12,11 @@ using tree_map = std::map<K, V>;
 template<class K, class V>
 using hash_map = std::unordered_map<K, V>;
 
-template<typename letter>
 struct kmer {
-    const letter *data;
+    const ltype *data;
     int k;
 
-    kmer(const letter *seq = nullptr, int size = 0)
+    kmer(const ltype *seq = nullptr, int size = 0)
         : data(seq)
         , k(size) {
     }
@@ -46,11 +45,7 @@ struct kmer {
         swap(s1.k, s2.k);
     }
 
-    const letter& operator[](int i) const {
-        return data[i];
-    }
-
-    letter& operator[](int i) {
+    const ltype& operator[](int i) const {
         return data[i];
     }
 
@@ -60,8 +55,7 @@ struct kmer {
 
 };
 
-template<typename letter>
-inline int compare(const kmer<letter> &s1, const kmer<letter> &s2) {
+inline int compare(const kmer &s1, const kmer &s2) {
     for (int i = 0; ; i++) {
         if (i >= std::min(s1.size(), s2.size())) {
             return s1.size() - s2.size();
@@ -72,20 +66,15 @@ inline int compare(const kmer<letter> &s1, const kmer<letter> &s2) {
     }
 }
 
-
-
-template<typename letter>
-bool operator<(const kmer<letter> &s1, const kmer<letter> &s2) {
+inline bool operator<(const kmer &s1, const kmer &s2) {
     return compare(s1, s2) < 0;
 }
 
-template<typename letter>
-bool operator>(const kmer<letter> &s1, const kmer<letter> &s2) {
+inline bool operator>(const kmer &s1, const kmer &s2) {
     return compare(s1, s2) > 0;
 }
 
-template<typename letter>
-bool operator==(const kmer<letter> &s1, const kmer<letter> &s2) {
+inline bool operator==(const kmer &s1, const kmer &s2) {
     if (s1.size() != s2.size()) {
         return false;
     }
@@ -97,28 +86,24 @@ bool operator==(const kmer<letter> &s1, const kmer<letter> &s2) {
     return true;
 }
 
-template<typename letter>
-bool operator>=(const kmer<letter> &s1, const kmer<letter> &s2) {
+inline bool operator>=(const kmer &s1, const kmer &s2) {
     return !(s1 < s2);
 }
 
-template<typename letter>
-bool operator<=(const kmer<letter> &s1, const kmer<letter> &s2) {
+inline bool operator<=(const kmer &s1, const kmer &s2) {
     return !(s1 > s2);
 }
 
-template<typename letter>
-bool operator!=(const kmer<letter> &s1, const kmer<letter> &s2) {
+inline bool operator!=(const kmer &s1, const kmer &s2) {
     return !(s1 == s2);
 }
 
 namespace std {
 
     template <>
-    template <typename letter>
-    struct hash< kmer<letter> >
+    struct hash< kmer >
     {
-        std::size_t operator()(const kmer<letter>& s) const {
+        std::size_t operator()(const kmer& s) const {
             using std::hash;
             using std::size_t;
 
@@ -132,17 +117,16 @@ namespace std {
 
 }
 
-template<typename letter>
 struct kmer_count {
-    kmer<letter> data;
+    kmer data;
     int count;
 
-    kmer_count(const kmer<letter> &s, int c)
+    kmer_count(const kmer &s, int c)
         : data(s)
         , count(c) {
     }
 
-    kmer_count(const letter *seq = nullptr, int size = 0, int c = 0)
+    kmer_count(const ltype *seq = nullptr, int size = 0, int c = 0)
         : data(seq, size)
         , count(c) {
     }
@@ -152,29 +136,27 @@ struct kmer_count {
 
 };
 
-template<typename letter>
-vector1D< kmer_count<letter> > count_kmers(const vector1D<letter> &seq, int k) {
+inline vector1D< kmer_count > count_kmers(const vector1D<ltype> &seq, int k) {
 
-    tree_map<kmer<letter>, int> map;
+    tree_map<kmer, int> map;
 
     for (int i = 0; i < seq.size() - k + 1; i++) {
-        kmer<letter> s(seq.data() + i, k);
+        kmer s(seq.data() + i, k);
         map[s]++;
     }
 
     int id = 0;
-    vector1D< kmer_count<letter> > result(map.size());
+    vector1D< kmer_count > result(map.size());
     for (auto it = map.cbegin(); it != map.cend(); ++it) {
-        result[id++] = kmer_count<letter>(it->first, it->second);
+        result[id++] = kmer_count(it->first, it->second);
     }
 
     return result;
 }
 
-template<typename letter>
-vector2D< kmer_count<letter> > count_all_kmers(const vector2D<letter> &seqs, int k) {
+inline vector2D< kmer_count > count_all_kmers(const vector2D<ltype> &seqs, int k) {
 
-    vector2D< kmer_count<letter> > result(seqs.size(), 0);
+    vector2D< kmer_count > result(seqs.size(), 0);
 
     for (int i = 0; i < seqs.size(); i++) {
         result[i] = count_kmers(seqs[i], k);

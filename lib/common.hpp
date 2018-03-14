@@ -13,3 +13,5 @@
 
 #include "vector.hpp"
 #include "matrix.hpp"
+
+typedef int32_t ltype;

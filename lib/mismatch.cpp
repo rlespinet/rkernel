@@ -4,36 +4,33 @@
 #include "kmer.hpp"
 #include "mismatch.hpp"
 
-template<typename letter>
-struct kmer_mismatch : kmer_count<letter> {
+struct kmer_mismatch : kmer_count {
     int seq_id;
     int mismatchs;
 
     kmer_mismatch()
-	: kmer_count<letter>()
+	: kmer_count()
 	, seq_id(0)
 	, mismatchs(0) {
     }
 
-    kmer_mismatch(const kmer_count<letter> &s, int i, int m)
-	: kmer_count<letter>(s)
+    kmer_mismatch(const kmer_count &s, int i, int m)
+	: kmer_count(s)
 	, seq_id(i)
 	, mismatchs(m) {
     }
 
 };
 
-template<typename letter>
-inline bool compare(const kmer_mismatch<letter> &s1, const kmer_mismatch<letter> &s2) {
+inline bool compare(const kmer_mismatch &s1, const kmer_mismatch &s2) {
     return s1.seq_id < s2.seq_id;
 }
 
-template<typename letter>
-vector1D< kmer_mismatch<letter> > compute_kmer_mismatch(const vector2D<letter> &sequences,
+vector1D< kmer_mismatch > compute_kmer_mismatch(const vector2D<ltype> &sequences,
                                               int sequences_len, int alphabet_size,
                                               int k, int m) {
 
-    vector2D< kmer_count<letter> > kmers = count_all_kmers(sequences, k);
+    vector2D< kmer_count > kmers = count_all_kmers(sequences, k);
 
     int total_kmers = 0;
     for (int i = 0; i < kmers.size(); i++) {
@@ -41,10 +38,10 @@ vector1D< kmer_mismatch<letter> > compute_kmer_mismatch(const vector2D<letter> &
     }
 
     int kmer_mismatch_size = 0;
-    vector1D< kmer_mismatch<letter> > kmer_mismatchs(total_kmers);
+    vector1D< kmer_mismatch > kmer_mismatchs(total_kmers);
     for (int i = 0; i < kmers.size(); i++) {
         for (int j = 0; j < kmers[i].size(); j++) {
-            kmer_mismatchs[kmer_mismatch_size] = kmer_mismatch<letter>(kmers[i][j], i, m);
+            kmer_mismatchs[kmer_mismatch_size] = kmer_mismatch(kmers[i][j], i, m);
             kmer_mismatch_size++;
         }
     }
@@ -53,9 +50,9 @@ vector1D< kmer_mismatch<letter> > compute_kmer_mismatch(const vector2D<letter> &
     return kmer_mismatchs;
 }
 
-template<typename letter, typename dtype>
+template<typename dtype>
 void mismatch_compute_rec(sq_matrix<dtype> &K,
-                          const vector1D< kmer_mismatch<letter> > &tracks,
+                          const vector1D< kmer_mismatch > &tracks,
                           int alphabet_size, int k, int d) {
 
     if (tracks.size() == 0) {
@@ -85,14 +82,14 @@ void mismatch_compute_rec(sq_matrix<dtype> &K,
         return;
     }
 
-    vector1D< kmer_mismatch<letter> > new_tracks(tracks.size());
+    vector1D< kmer_mismatch > new_tracks(tracks.size());
 
-    for (letter a = 0; a < alphabet_size; a++) {
+    for (ltype a = 0; a < alphabet_size; a++) {
 
         int new_tracks_size = 0;
         for (int i = 0; i < tracks.size(); i++) {
 
-            letter c = tracks[i].data[d];
+            ltype c = tracks[i].data[d];
             if (c == a || tracks[i].mismatchs > 0) {
 
                 new_tracks[new_tracks_size] = tracks[i];
@@ -107,23 +104,23 @@ void mismatch_compute_rec(sq_matrix<dtype> &K,
 
         new_tracks.resize(new_tracks_size);
 
-        mismatch_compute_rec<letter, dtype>(K, new_tracks, alphabet_size, k, d + 1);
+        mismatch_compute_rec<dtype>(K, new_tracks, alphabet_size, k, d + 1);
 
     }
 
 }
 
 
-template<typename letter, typename dtype>
-sq_matrix<dtype> mismatch(const vector2D<letter> &sequences,
+template<typename dtype>
+sq_matrix<dtype> mismatch(const vector2D<ltype> &sequences,
                           int sequences_len, int alphabet_size,
                           int k, int m) {
 
-    vector1D<kmer_mismatch<letter> > kmer_mismatchs = compute_kmer_mismatch(sequences, sequences_len,
+    vector1D<kmer_mismatch > kmer_mismatchs = compute_kmer_mismatch(sequences, sequences_len,
 									    alphabet_size, k, m);
     sq_matrix<dtype> K(sequences.size(), 0);
 
-    mismatch_compute_rec<letter, dtype>(K, kmer_mismatchs, alphabet_size, k, 0);
+    mismatch_compute_rec<dtype>(K, kmer_mismatchs, alphabet_size, k, 0);
 
     K.symmetrise_lower();
 
@@ -132,5 +129,5 @@ sq_matrix<dtype> mismatch(const vector2D<letter> &sequences,
 }
 
 
-template sq_matrix<double> mismatch(const vector2D<int> &, int, int, int, int);
-template sq_matrix<float> mismatch(const vector2D<int> &, int, int, int, int);
+template sq_matrix<double> mismatch(const vector2D<ltype> &, int, int, int, int);
+template sq_matrix<float> mismatch(const vector2D<ltype> &, int, int, int, int);

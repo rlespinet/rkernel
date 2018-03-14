@@ -3,8 +3,8 @@
 #include <set>
 #include <map>
 
-template<typename letter, typename dtype>
-sequence_array<letter> to_sequence_array(dtype *data, int rows, int cols) {
+template<typename dtype>
+sequence_array to_sequence_array(dtype *data, int rows, int cols) {
 
     std::set<int> symbols;
     for (int i = 0; i < rows * cols; i++) {
@@ -17,13 +17,13 @@ sequence_array<letter> to_sequence_array(dtype *data, int rows, int cols) {
         symbol_map[*it] = symbol_size++;
     }
 
-    sequence_array<letter> seq_array = {
+    sequence_array seq_array = {
         symbol_size,
         cols,
-        vector2D<letter>(rows, cols)
+        vector2D<ltype>(rows, cols)
     };
 
-    vector2D<letter> &sequences = seq_array.sequences;
+    vector2D<ltype> &sequences = seq_array.sequences;
 
     sequences.resize(rows);
     for (int i = 0; i < rows; i++) {
@@ -37,4 +37,4 @@ sequence_array<letter> to_sequence_array(dtype *data, int rows, int cols) {
 
 }
 
-template sequence_array<int> to_sequence_array(int *, int, int);
+template sequence_array to_sequence_array(int *, int, int);
