@@ -8,13 +8,9 @@ struct vector1D {
     int m_size;
     T *m_data;
 
-    vector1D(int capacity = 0)
-        : vector1D<T>(capacity, capacity) {
-    }
-
-    vector1D(int capacity, int size)
+    vector1D(int capacity = 0, int size = 0)
         : m_capacity(capacity)
-        , m_size(capacity) {
+        , m_size(size) {
         m_data = new T[capacity];
     }
 
@@ -35,18 +31,7 @@ struct vector1D {
     }
 
     vector1D<T>& operator=(vector1D<T> oth) {
-        // TODO(RL) Don't need to always reallocate
-        // swap(*this, oth);
-        // return *this;
-
-        if (m_capacity < oth.m_size) {
-            vector1D<T> t(oth.m_capacity);
-            swap(*this, t);
-        }
-
-        std::copy(oth.m_data, oth.m_data + oth.m_size, m_data);
-        m_size = oth.m_size;
-
+        swap(*this, oth);
         return *this;
     }
 
@@ -95,6 +80,25 @@ struct vector1D {
         this->m_size = new_size;
     }
 
+    void push_back(const T& oth) {
+        assert(m_size < m_capacity);
+        m_data[m_size++] = oth;
+    }
+
+    void push_back(T&& oth) {
+        assert(m_size < m_capacity);
+        m_data[m_size++] = std::move(oth);
+    }
+
+    T pop_back() {
+        assert(m_size > 0);
+        return m_data[--m_size];
+    }
+
+    void clear() {
+        m_size = 0;
+    }
+
 };
 
 
@@ -106,7 +110,7 @@ struct vector2D : public vector1D< vector1D<T> > {
     using vector1D< vector1D<T> >::m_size;
 
     vector2D(int rows, int cols)
-        : vector1D< vector1D<T> >(rows) {
+        : vector1D< vector1D<T> >(rows, rows) {
 
         for (int i = 0; i < rows; i++) {
             m_data[i] = vector1D<T>(cols);

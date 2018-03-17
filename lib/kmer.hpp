@@ -145,10 +145,10 @@ inline vector1D< kmer_count > count_kmers(const vector1D<ltype> &seq, int k) {
         map[s]++;
     }
 
-    int id = 0;
     vector1D< kmer_count > result(map.size());
     for (auto it = map.cbegin(); it != map.cend(); ++it) {
-        result[id++] = kmer_count(it->first, it->second);
+        const kmer_count elt(it->first, it->second);
+        result.push_back(elt);
     }
 
     return result;
@@ -163,4 +163,14 @@ inline vector2D< kmer_count > count_all_kmers(const vector2D<ltype> &seqs, int k
     }
 
     return result;
+}
+
+
+inline int find(const kmer& s, ltype l, int start = 0) {
+    for (int i = start; i < s.size(); i++) {
+	if (s[i] == l) {
+	    return i;
+	}
+    }
+    return -1;
 }

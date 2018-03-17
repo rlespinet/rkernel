@@ -14,6 +14,12 @@ struct kmer_mismatch : kmer_count {
 	, mismatchs(0) {
     }
 
+    kmer_mismatch(const kmer_mismatch &oth)
+        : kmer_count(oth)
+        , seq_id(oth.seq_id)
+        , mismatchs(oth.mismatchs) {
+    }
+
     kmer_mismatch(const kmer_count &s, int i, int m)
 	: kmer_count(s)
 	, seq_id(i)
@@ -37,15 +43,13 @@ vector1D< kmer_mismatch > compute_kmer_mismatch(const vector2D<ltype> &sequences
         total_kmers += kmers[i].size();
     }
 
-    int kmer_mismatch_size = 0;
     vector1D< kmer_mismatch > kmer_mismatchs(total_kmers);
     for (int i = 0; i < kmers.size(); i++) {
         for (int j = 0; j < kmers[i].size(); j++) {
-            kmer_mismatchs[kmer_mismatch_size] = kmer_mismatch(kmers[i][j], i, m);
-            kmer_mismatch_size++;
+            const kmer_mismatch elt(kmers[i][j], i, m);
+            kmer_mismatchs.push_back(elt);
         }
     }
-    kmer_mismatchs.resize(kmer_mismatch_size);
 
     return kmer_mismatchs;
 }
@@ -86,23 +90,21 @@ void mismatch_compute_rec(sq_matrix<dtype> &K,
 
     for (ltype a = 0; a < alphabet_size; a++) {
 
-        int new_tracks_size = 0;
+        new_tracks.clear();
+
         for (int i = 0; i < tracks.size(); i++) {
 
             ltype c = tracks[i].data[d];
             if (c == a || tracks[i].mismatchs > 0) {
 
-                new_tracks[new_tracks_size] = tracks[i];
+                new_tracks.push_back(tracks[i]);
                 if (c != a) {
-                    new_tracks[new_tracks_size].mismatchs --;
+                    new_tracks[new_tracks.size() - 1].mismatchs--;
                 }
 
-                new_tracks_size++;
             }
 
         }
-
-        new_tracks.resize(new_tracks_size);
 
         mismatch_compute_rec<dtype>(K, new_tracks, alphabet_size, k, d + 1);
 
