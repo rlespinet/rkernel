@@ -99,7 +99,7 @@ void mismatch_compute_rec(sq_matrix<dtype> &K,
 
                 new_tracks.push_back(tracks[i]);
                 if (c != a) {
-                    new_tracks[new_tracks.size() - 1].mismatchs--;
+                    new_tracks.last().mismatchs--;
                 }
 
             }

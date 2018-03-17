@@ -99,6 +99,27 @@ struct vector1D {
         m_size = 0;
     }
 
+    const T& last() const {
+        assert(m_size > 0);
+        return m_data[m_size - 1];
+    }
+
+    T& last() {
+        assert(m_size > 0);
+        return m_data[m_size - 1];
+    }
+
+    const T& first() const {
+        assert(m_size > 0);
+        return m_data[0];
+    }
+
+    T& first() {
+        assert(m_size > 0);
+        return m_data[0];
+    }
+
+
 };
 
 
