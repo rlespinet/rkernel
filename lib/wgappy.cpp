@@ -83,27 +83,33 @@ void wgappy_compute_rec(sq_matrix<dtype> &K,
     }
 
     if (branch.size() == k) {
-        // This is a leaf !
-        // std::sort(tracks.data(), tracks.data() + tracks.size(), compare_wgappy);
-
-        // NOTE(RL) Normally, we would iterate for i=0..size and j=0..size
-        // but in fact we can iterator for j=i..size, and multiply
-        // by a coefficient (coeff) to compensate
-        vector1D<float> weights(tracks.size(), tracks.size());
 
         kmer cmp(branch.data(), branch.size());
+
+        vector1D<float> matches(tracks.size());
+        vector1D<int> ids(tracks.size());
+
+        matches.push_back(0.0f);
+        ids.push_back(tracks[0].seq_id);
         for (int i = 0; i < tracks.size(); i++) {
-            weights[i] = substring_occurences(tracks[i].data, cmp, w) * tracks[i].count;
+
+            int id = tracks[i].seq_id;
+
+            if (id != ids.last()) {
+                matches.push_back(0.0f);
+                ids.push_back(id);
+            }
+            matches.last() += substring_occurences(tracks[i].data, cmp, w) * tracks[i].count;
         }
 
-        for (int i = 0; i < tracks.size(); i++) {
-            for (int j = i; j < tracks.size(); j++) {
+        for (int i = 0; i < matches.size(); i++) {
 
-                int id1 = tracks[i].seq_id;
-                int id2 = tracks[j].seq_id;
+            for (int j = i; j < matches.size(); j++) {
 
-                float coeff = (i != j && id1 == id2) ? 2.0f : 1.0f;
-                K(id1, id2) += coeff * weights[i] * weights[j];
+                int idi = ids[i];
+                int idj = ids[j];
+
+                K(idi, idj) += matches[i] * matches[j];
             }
         }
 
