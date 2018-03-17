@@ -5,3 +5,4 @@
 #include "spectrum.hpp"
 #include "mismatch.hpp"
 #include "wgappy.hpp"
+#include "wildcard.hpp"
