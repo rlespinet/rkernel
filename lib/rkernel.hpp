@@ -4,3 +4,4 @@
 #include "format.hpp"
 #include "spectrum.hpp"
 #include "mismatch.hpp"
+#include "wgappy.hpp"

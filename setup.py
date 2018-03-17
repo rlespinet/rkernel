@@ -18,6 +18,7 @@ module = Extension('rkernel',
                         'lib/format.cpp',
                         'lib/spectrum.cpp',
                         'lib/mismatch.cpp',
+                        'lib/wgappy.cpp',
                     ])
 
 setup (name = 'RKERNEL',
