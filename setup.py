@@ -18,6 +18,7 @@ module = Extension('rkernel',
                         'lib/format.cpp',
                         'lib/spectrum.cpp',
                         'lib/mismatch.cpp',
+                        'lib/dimismatch.cpp',
                         'lib/wgappy.cpp',
                         'lib/wildcard.cpp',
                     ])
