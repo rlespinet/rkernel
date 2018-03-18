@@ -7,14 +7,14 @@
 struct kmer_dimismatch : kmer_count {
     int seq_id;
     int mismatchs;
-    bool last;
+    int consecutive;
     int total;
 
     kmer_dimismatch()
 	: kmer_count()
 	, seq_id(0)
 	, mismatchs(0)
-        , last(false)
+        , consecutive(0)
         , total(0) {
     }
 
@@ -22,15 +22,15 @@ struct kmer_dimismatch : kmer_count {
         : kmer_count(oth)
         , seq_id(oth.seq_id)
         , mismatchs(oth.mismatchs)
-        , last(oth.last)
+        , consecutive(oth.consecutive)
         , total(oth.total) {
     }
 
-    kmer_dimismatch(const kmer_count &s, int i, int m, bool last = false, int total = 0)
+    kmer_dimismatch(const kmer_count &s, int i, int m, int consecutive = 0, int total = 0)
 	: kmer_count(s)
 	, seq_id(i)
 	, mismatchs(m)
-        , last(last)
+        , consecutive(consecutive)
         , total(total) {
     }
 
@@ -41,8 +41,8 @@ inline bool compare(const kmer_dimismatch &s1, const kmer_dimismatch &s2) {
 }
 
 vector1D< kmer_dimismatch > compute_kmer_dimismatch(const vector2D<ltype> &sequences,
-                                                  int sequences_len, int alphabet_size,
-                                                  int k, int m) {
+                                                    int sequences_len, int alphabet_size,
+                                                    int k, int m) {
 
     vector2D< kmer_count > kmers = count_all_kmers(sequences, k);
 
@@ -65,8 +65,8 @@ vector1D< kmer_dimismatch > compute_kmer_dimismatch(const vector2D<ltype> &seque
 
 template<typename dtype>
 void dimismatch_compute_rec(sq_matrix<dtype> &K,
-                          const vector1D< kmer_dimismatch > &tracks,
-                          int alphabet_size, int k, int d) {
+                            const vector1D< kmer_dimismatch > &tracks,
+                            int alphabet_size, int k, int r, int d) {
 
     if (tracks.size() == 0) {
         return;
@@ -116,11 +116,11 @@ void dimismatch_compute_rec(sq_matrix<dtype> &K,
             if (c == a || tracks[i].mismatchs > 0) {
 
                 int new_mismatchs = tracks[i].mismatchs - ((c == a) ? 0 : 1);
-                bool new_last = (c == a);
-                int new_total = tracks[i].total + (tracks[i].last && new_last ? 1 : 0);
+                int new_consecutive = (c == a) ? tracks[i].consecutive + 1 : 0;
+                int new_total = tracks[i].total + (new_consecutive >= r ? 1 : 0);
 
                 const kmer_dimismatch new_kmer(tracks[i], tracks[i].seq_id,
-                                               new_mismatchs, new_last, new_total);
+                                               new_mismatchs, new_consecutive, new_total);
 
                 new_tracks.push_back(new_kmer);
 
@@ -128,7 +128,7 @@ void dimismatch_compute_rec(sq_matrix<dtype> &K,
 
         }
 
-        dimismatch_compute_rec<dtype>(K, new_tracks, alphabet_size, k, d + 1);
+        dimismatch_compute_rec<dtype>(K, new_tracks, alphabet_size, k, r, d + 1);
 
     }
 
@@ -137,13 +137,13 @@ void dimismatch_compute_rec(sq_matrix<dtype> &K,
 template<typename dtype>
 sq_matrix<dtype> dimismatch(const vector2D<ltype> &sequences,
                             int sequences_len, int alphabet_size,
-                            int k, int m) {
+                            int k, int m, int r) {
 
     vector1D<kmer_dimismatch > kmer_dimismatchs = compute_kmer_dimismatch(sequences, sequences_len,
                                                                           alphabet_size, k, m);
     sq_matrix<dtype> K(sequences.size(), 0);
 
-    dimismatch_compute_rec<dtype>(K, kmer_dimismatchs, alphabet_size, k, 0);
+    dimismatch_compute_rec<dtype>(K, kmer_dimismatchs, alphabet_size, k, r, 0);
 
     K.symmetrise_lower();
 
@@ -151,5 +151,5 @@ sq_matrix<dtype> dimismatch(const vector2D<ltype> &sequences,
 
 }
 
-template sq_matrix<double> dimismatch(const vector2D<ltype> &, int, int, int, int);
-template sq_matrix<float> dimismatch(const vector2D<ltype> &, int, int, int, int);
+template sq_matrix<double> dimismatch(const vector2D<ltype> &, int, int, int, int, int);
+template sq_matrix<float> dimismatch(const vector2D<ltype> &, int, int, int, int, int);
