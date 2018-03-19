@@ -10,6 +10,7 @@ static char module_docstring[] = "Fast kernels for sequences";
 
 static char mismatch_docstring [] = "The mismatch kernel";
 static char dimismatch_docstring [] = "The dimismatch kernel";
+static char rmismatch_docstring [] = "The rmismatch kernel";
 static char spectrum_docstring [] = "The spectrum kernel";
 static char substring_docstring [] = "The substring kernel";
 static char wgappy_docstring [] = "The weighted gappy kernel";
@@ -17,6 +18,7 @@ static char wildcard_docstring [] = "The wildcard kernel";
 
 static PyObject *rkernel_mismatch_bind(PyObject *self, PyObject *args, PyObject *kwargs);
 static PyObject *rkernel_dimismatch_bind(PyObject *self, PyObject *args, PyObject *kwargs);
+static PyObject *rkernel_rmismatch_bind(PyObject *self, PyObject *args, PyObject *kwargs);
 static PyObject *rkernel_spectrum_bind(PyObject *self, PyObject *args, PyObject *kwargs);
 static PyObject *rkernel_substring_bind(PyObject *self, PyObject *args, PyObject *kwargs);
 static PyObject *rkernel_wgappy_bind(PyObject *self, PyObject *args, PyObject *kwargs);
@@ -27,6 +29,7 @@ static PyMethodDef rkernel_methods[] = {
     {"substring", (PyCFunction) rkernel_substring_bind, METH_VARARGS  | METH_KEYWORDS, substring_docstring},
     {"mismatch", (PyCFunction) rkernel_mismatch_bind, METH_VARARGS  | METH_KEYWORDS, mismatch_docstring},
     {"dimismatch", (PyCFunction) rkernel_dimismatch_bind, METH_VARARGS  | METH_KEYWORDS, dimismatch_docstring},
+    {"rmismatch", (PyCFunction) rkernel_rmismatch_bind, METH_VARARGS  | METH_KEYWORDS, rmismatch_docstring},
     {"wgappy", (PyCFunction) rkernel_wgappy_bind, METH_VARARGS  | METH_KEYWORDS, wgappy_docstring},
     {"wildcard", (PyCFunction) rkernel_wildcard_bind, METH_VARARGS  | METH_KEYWORDS, wildcard_docstring},
     {nullptr, nullptr, 0, nullptr}
@@ -194,7 +197,54 @@ static PyObject *rkernel_dimismatch_bind(PyObject *self, PyObject *args, PyObjec
     return kernel_matrix;
 }
 
+static PyObject *rkernel_rmismatch_bind(PyObject *self, PyObject *args, PyObject* kwargs) {
+    PyObject* obj = nullptr;
 
+    int k = 3;
+    int m = 1;
+    int r = 2;
+
+    char *keywords[] = {
+        "",
+        "k",
+        "m",
+        "r",
+        nullptr
+    };
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|iii", keywords, &obj, &k, &m, &r))
+        return nullptr;
+
+    if (k < 0) {
+        PyErr_SetString(PyExc_ValueError, "Substring size k must be positive");
+        Py_RETURN_NONE;
+    }
+
+    if (m < 0) {
+        PyErr_SetString(PyExc_ValueError, "Allowed mismatch must be positive");
+        Py_RETURN_NONE;
+    }
+
+    if (r <= 0) {
+        PyErr_SetString(PyExc_ValueError, "Allowed order must be greater than 1");
+        Py_RETURN_NONE;
+    }
+
+    sequence_array seq_array = parse_PyArrayString(obj);
+
+    sq_matrix<float> kernel = rmismatch<float>(seq_array.sequences,
+                                               seq_array.sequences_len,
+                                               seq_array.alphabet_size, k, m, r);
+
+    npy_intp dims[] = {kernel.rows(), kernel.cols()};
+    PyObject* kernel_matrix = PyArray_SimpleNewFromData(2, dims, NPY_FLOAT, kernel.steal_data());
+    if (kernel_matrix == nullptr) {
+        PyErr_SetString(PyExc_ValueError, "Failed to construct the final matrix");
+        Py_RETURN_NONE;
+    }
+
+    return kernel_matrix;
+}
 
 static PyObject *rkernel_wgappy_bind(PyObject *self, PyObject *args, PyObject* kwargs) {
     PyObject* obj = nullptr;

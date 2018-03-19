@@ -2,15 +2,15 @@
 #include <algorithm>
 
 #include "kmer.hpp"
-#include "dimismatch.hpp"
+#include "rmismatch.hpp"
 
-struct kmer_dimismatch : kmer_count {
+struct kmer_rmismatch : kmer_count {
     int seq_id;
     int mismatchs;
     int consecutive;
     int total;
 
-    kmer_dimismatch()
+    kmer_rmismatch()
 	: kmer_count()
 	, seq_id(0)
 	, mismatchs(0)
@@ -18,7 +18,7 @@ struct kmer_dimismatch : kmer_count {
         , total(0) {
     }
 
-    kmer_dimismatch(const kmer_dimismatch &oth)
+    kmer_rmismatch(const kmer_rmismatch &oth)
         : kmer_count(oth)
         , seq_id(oth.seq_id)
         , mismatchs(oth.mismatchs)
@@ -26,7 +26,7 @@ struct kmer_dimismatch : kmer_count {
         , total(oth.total) {
     }
 
-    kmer_dimismatch(const kmer_count &s, int i, int m, int consecutive = 0, int total = 0)
+    kmer_rmismatch(const kmer_count &s, int i, int m, int consecutive = 0, int total = 0)
 	: kmer_count(s)
 	, seq_id(i)
 	, mismatchs(m)
@@ -36,13 +36,13 @@ struct kmer_dimismatch : kmer_count {
 
 };
 
-inline bool compare(const kmer_dimismatch &s1, const kmer_dimismatch &s2) {
+inline bool compare(const kmer_rmismatch &s1, const kmer_rmismatch &s2) {
     return s1.seq_id < s2.seq_id;
 }
 
-vector1D< kmer_dimismatch > compute_kmer_dimismatch(const vector2D<ltype> &sequences,
-                                                    int sequences_len, int alphabet_size,
-                                                    int k, int m) {
+vector1D< kmer_rmismatch > compute_kmer_rmismatch(const vector2D<ltype> &sequences,
+                                                  int sequences_len, int alphabet_size,
+                                                  int k, int m) {
 
     vector2D< kmer_count > kmers = count_all_kmers(sequences, k);
 
@@ -51,22 +51,22 @@ vector1D< kmer_dimismatch > compute_kmer_dimismatch(const vector2D<ltype> &seque
         total_kmers += kmers[i].size();
     }
 
-    vector1D< kmer_dimismatch > kmer_dimismatchs(total_kmers);
+    vector1D< kmer_rmismatch > kmer_rmismatchs(total_kmers);
     for (int i = 0; i < kmers.size(); i++) {
         for (int j = 0; j < kmers[i].size(); j++) {
-            const kmer_dimismatch elt(kmers[i][j], i, m);
-            kmer_dimismatchs.push_back(elt);
+            const kmer_rmismatch elt(kmers[i][j], i, m);
+            kmer_rmismatchs.push_back(elt);
         }
     }
 
-    return kmer_dimismatchs;
+    return kmer_rmismatchs;
 }
 
 
 template<typename dtype>
-void dimismatch_compute_rec(sq_matrix<dtype> &K,
-                            const vector1D< kmer_dimismatch > &tracks,
-                            int alphabet_size, int k, int r, int d) {
+void rmismatch_compute_rec(sq_matrix<dtype> &K,
+                           const vector1D< kmer_rmismatch > &tracks,
+                           int alphabet_size, int k, int r, int d) {
 
     if (tracks.size() == 0) {
         return;
@@ -104,7 +104,7 @@ void dimismatch_compute_rec(sq_matrix<dtype> &K,
         return;
     }
 
-    vector1D< kmer_dimismatch > new_tracks(tracks.size());
+    vector1D< kmer_rmismatch > new_tracks(tracks.size());
 
     for (ltype a = 0; a < alphabet_size; a++) {
 
@@ -119,8 +119,8 @@ void dimismatch_compute_rec(sq_matrix<dtype> &K,
                 int new_consecutive = (c == a) ? tracks[i].consecutive + 1 : 0;
                 int new_total = tracks[i].total + (new_consecutive >= r ? 1 : 0);
 
-                const kmer_dimismatch new_kmer(tracks[i], tracks[i].seq_id,
-                                               new_mismatchs, new_consecutive, new_total);
+                const kmer_rmismatch new_kmer(tracks[i], tracks[i].seq_id,
+                                              new_mismatchs, new_consecutive, new_total);
 
                 new_tracks.push_back(new_kmer);
 
@@ -128,22 +128,22 @@ void dimismatch_compute_rec(sq_matrix<dtype> &K,
 
         }
 
-        dimismatch_compute_rec<dtype>(K, new_tracks, alphabet_size, k, r, d + 1);
+        rmismatch_compute_rec<dtype>(K, new_tracks, alphabet_size, k, r, d + 1);
 
     }
 
 }
 
 template<typename dtype>
-sq_matrix<dtype> dimismatch(const vector2D<ltype> &sequences,
-                            int sequences_len, int alphabet_size,
-                            int k, int m, int r) {
+sq_matrix<dtype> rmismatch(const vector2D<ltype> &sequences,
+                           int sequences_len, int alphabet_size,
+                           int k, int m, int r) {
 
-    vector1D<kmer_dimismatch > kmer_dimismatchs = compute_kmer_dimismatch(sequences, sequences_len,
-                                                                          alphabet_size, k, m);
+    vector1D<kmer_rmismatch > kmer_rmismatchs = compute_kmer_rmismatch(sequences, sequences_len,
+                                                                       alphabet_size, k, m);
     sq_matrix<dtype> K(sequences.size(), 0);
 
-    dimismatch_compute_rec<dtype>(K, kmer_dimismatchs, alphabet_size, k, r, 0);
+    rmismatch_compute_rec<dtype>(K, kmer_rmismatchs, alphabet_size, k, r, 0);
 
     K.symmetrise_lower();
 
@@ -151,5 +151,15 @@ sq_matrix<dtype> dimismatch(const vector2D<ltype> &sequences,
 
 }
 
-template sq_matrix<double> dimismatch(const vector2D<ltype> &, int, int, int, int, int);
-template sq_matrix<float> dimismatch(const vector2D<ltype> &, int, int, int, int, int);
+template<typename dtype>
+sq_matrix<dtype> dimismatch(const vector2D<ltype> &sequences,
+                            int sequences_len, int alphabet_size,
+                            int k, int m) {
+    return rmismatch<dtype>(sequences, sequences_len, alphabet_size, k, m, 2);
+}
+
+template sq_matrix<double> rmismatch(const vector2D<ltype> &, int, int, int, int, int);
+template sq_matrix<float> rmismatch(const vector2D<ltype> &, int, int, int, int, int);
+
+template sq_matrix<double> dimismatch(const vector2D<ltype> &, int, int, int, int);
+template sq_matrix<float> dimismatch(const vector2D<ltype> &, int, int, int, int);
