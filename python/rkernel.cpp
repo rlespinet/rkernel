@@ -16,6 +16,7 @@ static char spectrum_docstring [] = "The spectrum kernel";
 static char substring_docstring [] = "The substring kernel";
 static char wgappy_docstring [] = "The weighted gappy kernel";
 static char wildcard_docstring [] = "The wildcard kernel";
+static char local_align_docstring [] = "Local alignment kernel";
 
 static PyObject *rkernel_mismatch_bind(PyObject *self, PyObject *args, PyObject *kwargs);
 static PyObject *rkernel_wmismatch_bind(PyObject *self, PyObject *args, PyObject *kwargs);
@@ -25,6 +26,7 @@ static PyObject *rkernel_spectrum_bind(PyObject *self, PyObject *args, PyObject 
 static PyObject *rkernel_substring_bind(PyObject *self, PyObject *args, PyObject *kwargs);
 static PyObject *rkernel_wgappy_bind(PyObject *self, PyObject *args, PyObject *kwargs);
 static PyObject *rkernel_wildcard_bind(PyObject *self, PyObject *args, PyObject *kwargs);
+static PyObject *rkernel_local_align_bind(PyObject *self, PyObject *args, PyObject *kwargs);
 
 static PyMethodDef rkernel_methods[] = {
     {"spectrum", (PyCFunction) rkernel_spectrum_bind, METH_VARARGS | METH_KEYWORDS, spectrum_docstring},
@@ -35,6 +37,7 @@ static PyMethodDef rkernel_methods[] = {
     {"rmismatch", (PyCFunction) rkernel_rmismatch_bind, METH_VARARGS  | METH_KEYWORDS, rmismatch_docstring},
     {"wgappy", (PyCFunction) rkernel_wgappy_bind, METH_VARARGS  | METH_KEYWORDS, wgappy_docstring},
     {"wildcard", (PyCFunction) rkernel_wildcard_bind, METH_VARARGS  | METH_KEYWORDS, wildcard_docstring},
+    {"local_alignment", (PyCFunction) rkernel_local_align_bind, METH_VARARGS  | METH_KEYWORDS, local_align_docstring},
     {nullptr, nullptr, 0, nullptr}
 };
 
@@ -381,6 +384,46 @@ static PyObject *rkernel_wildcard_bind(PyObject *self, PyObject *args, PyObject*
                                               seq_array.sequences_len,
                                               seq_array.alphabet_size,
                                               k, m, w);
+
+    npy_intp dims[] = {kernel.rows(), kernel.cols()};
+    PyObject* kernel_matrix = PyArray_SimpleNewFromData(2, dims, NPY_FLOAT, kernel.steal_data());
+    if (kernel_matrix == nullptr) {
+        PyErr_SetString(PyExc_ValueError, "Failed to construct the final matrix");
+        Py_RETURN_NONE;
+    }
+
+    return kernel_matrix;
+
+}
+
+
+static PyObject *rkernel_local_align_bind(PyObject *self, PyObject *args, PyObject* kwargs) {
+    PyObject* obj = nullptr;
+
+    float gap_open = 10.0f;
+    float gap_extension = 0.5f;
+    float substitution = 5.0f;
+
+    char *keywords[] = {
+        "",
+        "gap_open",
+        "gap_extension",
+        "substitution",
+        nullptr
+    };
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|fff", keywords, &obj, &gap_open, &gap_extension, &substitution))
+        return nullptr;
+
+
+    // TODO(RL) Verify arguments
+
+    sequence_array seq_array = parse_PyArrayString(obj);
+
+    sq_matrix<float> kernel = local_alignment<float>(seq_array.sequences,
+                                                     seq_array.sequences_len,
+                                                     seq_array.alphabet_size,
+                                                     substitution, gap_open, gap_extension);
 
     npy_intp dims[] = {kernel.rows(), kernel.cols()};
     PyObject* kernel_matrix = PyArray_SimpleNewFromData(2, dims, NPY_FLOAT, kernel.steal_data());

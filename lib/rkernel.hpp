@@ -8,3 +8,4 @@
 #include "rmismatch.hpp"
 #include "wgappy.hpp"
 #include "wildcard.hpp"
+#include "local_alignment.hpp"

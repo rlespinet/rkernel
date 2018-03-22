@@ -22,6 +22,7 @@ module = Extension('rkernel',
                         'lib/rmismatch.cpp',
                         'lib/wgappy.cpp',
                         'lib/wildcard.cpp',
+                        'lib/local_alignment.cpp',
                     ])
 
 setup (name = 'RKERNEL',
