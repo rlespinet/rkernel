@@ -80,6 +80,16 @@ struct vector1D {
         this->m_size = new_size;
     }
 
+    void inc_size(int inc = 1) {
+        assert(m_size + inc <= m_capacity);
+        m_size += inc;
+    }
+
+    void dec_size(int dec = 1) {
+        assert(m_size - dec >= 0);
+        m_size -= dec;
+    }
+
     void push_back(const T& oth) {
         assert(m_size < m_capacity);
         m_data[m_size++] = oth;
@@ -90,9 +100,9 @@ struct vector1D {
         m_data[m_size++] = std::move(oth);
     }
 
-    T pop_back() {
+    T&& pop_back() {
         assert(m_size > 0);
-        return m_data[--m_size];
+        return std::move(m_data[--m_size]);
     }
 
     void clear() {
@@ -119,6 +129,21 @@ struct vector1D {
         return m_data[0];
     }
 
+    const T* cbegin() const {
+        return m_data;
+    }
+
+    const T* cend() const {
+        return m_data + m_size;
+    }
+
+    T* begin() {
+        return m_data;
+    }
+
+    T* end() {
+        return m_data + m_size;
+    }
 
 };
 

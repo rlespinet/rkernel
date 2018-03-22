@@ -4,6 +4,7 @@
 #include "format.hpp"
 #include "spectrum.hpp"
 #include "mismatch.hpp"
+#include "wmismatch.hpp"
 #include "rmismatch.hpp"
 #include "wgappy.hpp"
 #include "wildcard.hpp"
