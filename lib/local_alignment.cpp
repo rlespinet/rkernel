@@ -31,10 +31,11 @@ struct dynamic_cell {
 };
 
 template<typename dtype>
-inline dtype needleman_wunsch_affine_gap(const vector1D<ltype> &sequence1,
-                                         const vector1D<ltype> &sequence2,
-                                         int alphabet_size, dtype substitution,
-                                         dtype gap_open, dtype gap_extension) {
+inline dtype needleman_wunsch_affine_gap_pair(const vector1D<ltype> &sequence1,
+                                              const vector1D<ltype> &sequence2,
+                                              int alphabet_size,
+                                              dtype similarity, dtype substitution,
+                                              dtype gap_open, dtype gap_extension) {
 
     using cell_type = dynamic_cell<float>;
 
@@ -48,14 +49,13 @@ inline dtype needleman_wunsch_affine_gap(const vector1D<ltype> &sequence1,
 
     const dtype zero = dtype();
     const dtype infm = std::numeric_limits<dtype>::min();
-    const dtype infp = std::numeric_limits<dtype>::max();
+    // const dtype infp = std::numeric_limits<dtype>::max();
 
     table1[0] = {zero, zero, zero};
     for (int j = 0; j < sequence2.size(); j++) {
         table1[j + 1] = {infm, - (j + 1) * gap_extension, infm};
     }
 
-    dtype best_score = std::numeric_limits<dtype>::min();
     for (int i = 0; i < sequence1.size(); i++) {
 
         table2[0] = {infm, infm, - (i + 1) * gap_extension};
@@ -64,7 +64,7 @@ inline dtype needleman_wunsch_affine_gap(const vector1D<ltype> &sequence1,
 
             cell_type &cell = table2[j + 1];
 
-            dtype cost = (sequence1[i] == sequence2[j]) ? substitution : -4;
+            dtype cost = (sequence1[i] == sequence2[j]) ? similarity : -substitution;
 
             // TODO(RL) This formula I've derived myself (verify)
             cell.M = max(table1[j].M + cost,
@@ -90,11 +90,13 @@ inline dtype needleman_wunsch_affine_gap(const vector1D<ltype> &sequence1,
 
 }
 
+// TODO(RL) Pass a similarity matrix directly
 template<typename dtype>
-inline dtype smith_waterman_affine_gap(const vector1D<ltype> &sequence1,
-                                       const vector1D<ltype> &sequence2,
-                                       int alphabet_size, dtype substitution,
-                                       dtype gap_open, dtype gap_extension) {
+inline dtype smith_waterman_affine_gap_pair(const vector1D<ltype> &sequence1,
+                                            const vector1D<ltype> &sequence2,
+                                            int alphabet_size,
+                                            dtype similarity, dtype substitution,
+                                            dtype gap_open, dtype gap_extension) {
 
     using cell_type = dynamic_cell<float>;
 
@@ -121,7 +123,7 @@ inline dtype smith_waterman_affine_gap(const vector1D<ltype> &sequence1,
 
             cell_type &cell = table2[j + 1];
 
-            dtype cost = (sequence1[i] == sequence2[j]) ? substitution : -4;
+            dtype cost = (sequence1[i] == sequence2[j]) ? similarity : -substitution;
 
             // TODO(RL) This formula I've derived myself (verify)
             cell.M = max(table1[j].M + cost,
@@ -148,10 +150,10 @@ inline dtype smith_waterman_affine_gap(const vector1D<ltype> &sequence1,
 }
 
 template<typename dtype>
-sq_matrix<dtype> local_alignment(const vector2D<ltype> &sequences,
-                                 int sequences_len, int alphabet_size,
-                                 dtype substitution, dtype gap_open,
-                                 dtype gap_extension) {
+sq_matrix<dtype> smith_waterman_affine_gap(const vector2D<ltype> &sequences,
+                                           int sequences_len, int alphabet_size,
+                                           dtype similarity, dtype substitution,
+                                           dtype gap_open, dtype gap_extension) {
 
     sq_matrix<dtype> K(sequences.size(), sequences.size());
 
@@ -159,8 +161,10 @@ sq_matrix<dtype> local_alignment(const vector2D<ltype> &sequences,
 
         for (int j = i; j < sequences.size(); j++) {
 
-            K(i, j) = needleman_wunsch_affine_gap(sequences[i], sequences[j], alphabet_size,
-                                                  substitution, gap_open, gap_extension);
+            K(i, j) = smith_waterman_affine_gap_pair(sequences[i], sequences[j],
+                                                     alphabet_size,
+                                                     similarity, substitution,
+                                                     gap_open, gap_extension);
         }
     }
 
@@ -170,5 +174,30 @@ sq_matrix<dtype> local_alignment(const vector2D<ltype> &sequences,
 }
 
 
+template<typename dtype>
+sq_matrix<dtype> needleman_wunsch_affine_gap(const vector2D<ltype> &sequences,
+                                             int sequences_len, int alphabet_size,
+                                             dtype similarity, dtype substitution,
+                                             dtype gap_open, dtype gap_extension) {
+
+    sq_matrix<dtype> K(sequences.size(), sequences.size());
+
+    for (int i = 0; i < sequences.size(); i++) {
+
+        for (int j = i; j < sequences.size(); j++) {
+
+            K(i, j) = needleman_wunsch_affine_gap_pair(sequences[i], sequences[j],
+                                                       alphabet_size,
+                                                       similarity, substitution,
+                                                       gap_open, gap_extension);
+        }
+    }
+
+    K.symmetrise_lower();
+
+    return K;
+}
+
 // template sq_matrix<double> local_alignment(const vector2D<ltype> &, int, int, double, double, double);
-template sq_matrix<float> local_alignment(const vector2D<ltype> &, int, int, float, float, float);
+template sq_matrix<float> needleman_wunsch_affine_gap(const vector2D<ltype> &, int, int, float, float, float, float);
+template sq_matrix<float> smith_waterman_affine_gap(const vector2D<ltype> &, int, int, float, float, float, float);
