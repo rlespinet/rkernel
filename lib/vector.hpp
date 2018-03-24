@@ -23,7 +23,7 @@ struct vector1D {
         swap(*this, oth);
     }
 
-    friend void swap(vector1D &v1, vector1D &v2) {
+    friend void swap(vector1D<T> &v1, vector1D<T> &v2) {
         using std::swap;
         swap(v1.m_capacity, v2.m_capacity);
         swap(v1.m_size, v2.m_size);
