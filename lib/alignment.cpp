@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <limits>
 
-#include "local_alignment.hpp"
+#include "alignment.hpp"
 
 
 template<typename T>
@@ -198,6 +198,5 @@ sq_matrix<dtype> needleman_wunsch_affine_gap(const vector2D<ltype> &sequences,
     return K;
 }
 
-// template sq_matrix<double> local_alignment(const vector2D<ltype> &, int, int, double, double, double);
 template sq_matrix<float> needleman_wunsch_affine_gap(const vector2D<ltype> &, int, int, float, float, float, float);
 template sq_matrix<float> smith_waterman_affine_gap(const vector2D<ltype> &, int, int, float, float, float, float);
